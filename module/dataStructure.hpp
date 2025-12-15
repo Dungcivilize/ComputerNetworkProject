@@ -1,11 +1,14 @@
+#ifndef DATASTRUCTURE_HPP
+#define DATASTRUCTURE_HPP
+
 #include "../dependencies/index.hpp"
 
 typedef struct
 {
-    string id;
-    string name;
+    std::string id;
+    std::string name;
     struct sockaddr_in addr;
-    string token;
+    std::string token;
 } DeviceInfo;
 
 typedef struct Device
@@ -17,3 +20,5 @@ typedef struct Device
 
     ~Device() { close(sockfd); }
 } Device;
+
+#endif // DATASTRUCTURE_HPP

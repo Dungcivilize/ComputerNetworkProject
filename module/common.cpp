@@ -5,6 +5,10 @@
 #define BUFFER_SIZE 32787
 
 using namespace std;
+
+std::string handle_response(std::string response);
+std::string get_status_message(int status_code);
+
 int check_args(int argc, char* argv[]) {
     if (argc != 2) {
         printf("Usage: %s <port>\n", argv[0]);
@@ -28,10 +32,10 @@ void call_api(int sockfd, string request) {
         cout << "Failed to receive message from device." << endl;
         return;
     }
-    hanlde_response(response);
+    handle_response(response);
 }
 
-string hanlde_response(string response) {
+std::string handle_response(std::string response) {
     string action, status_code, power_data, data;
     stringstream ss(response);
     ss >> action >> status_code >> power_data;
@@ -42,7 +46,7 @@ string hanlde_response(string response) {
         cout << "Power consumption: " << power_data << " Watts" << endl;
     }
     if (stoi(status_code) % 100 != 0) {
-        return;
+        return "";
     }
     if (action == "WATER_NOW") {
         cout << "Watering amount: " << data << " Liters" << endl;
@@ -94,6 +98,7 @@ string hanlde_response(string response) {
     else {
         cout << "Unhandled action: " << action << endl;
     }
+    return "";
 }
 
 string get_status_message(int status_code) {

@@ -64,19 +64,20 @@ vector<DeviceInfo> broadcast(uint16_t port, float duration)
     return devices;
 }
 
+
 ssize_t find_device_info_by_id(vector<DeviceInfo> &list, string id)
 {
-    for (ssize_t idx = 0; idx < list.size(); idx++)
+    for (size_t idx = 0; idx < list.size(); idx++)
         if (id == list[idx].id)
-            return idx;
+            return (ssize_t)idx;
     return -1;
 }
 
 ssize_t find_device_by_id(vector<Device*> &devices, string id)
 {
-    for (ssize_t idx = 0; idx < devices.size(); idx++)
+    for (size_t idx = 0; idx < devices.size(); idx++)
         if (id == devices[idx]->info.id)
-            return idx;
+            return (ssize_t)idx;
     return -1;
 }
 

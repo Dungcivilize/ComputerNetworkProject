@@ -194,6 +194,7 @@ int main(int argc, char* argv[])
             }
         }
     }
-    delete udpid, tcpid;
+    delete udpid;
+    delete tcpid;
     return 0;
 }

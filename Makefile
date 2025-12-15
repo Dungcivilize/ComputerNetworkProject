@@ -2,8 +2,8 @@ CXX = g++
 CXXFLAGS = -std=c++11 -Wall -pthread
 
 # Source files
-APP_SRC = app.cpp module/common.cpp module/register.cpp module/index.hpp
-SENSOR_SRC = sensor.cpp
+APP_SRC = app.cpp module/common.cpp module/register.cpp dependencies/streamtransmission.cpp dependencies/utils.cpp
+SENSOR_SRC = sensor.cpp dependencies/streamtransmission.cpp dependencies/utils.cpp
 
 # Output binaries
 APP_BIN = app
