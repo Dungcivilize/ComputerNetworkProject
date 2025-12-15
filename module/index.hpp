@@ -4,5 +4,6 @@
 #include "register.hpp"
 #include "common.hpp"
 #include "dataStructure.hpp"
+#include "callApi.hpp"
 
 #endif // MODULE_INDEX_HPP

@@ -140,8 +140,6 @@ int main(int argc, char** argv)
     uint16_t port = (uint16_t)inp_port;
     vector<DeviceInfo> device_list;
     vector<Device*> devices;
-
-    int connected_devive_id = -1;
     while (1)
     {
         fd_set rfds;
@@ -168,34 +166,31 @@ int main(int argc, char** argv)
         if (FD_ISSET(STDIN_FILENO, &rfds))
         {
             cout << "===============================" << endl;
-            cout << "Type LIST to see available devices." << endl;
-            cout << "Type HELP to see available commands." << endl;
-            cout << "TYPE HELP <command> to see command usage." << endl;
+            cout << "Available commands:" << endl;
+            cout << " 1. SCAN <duration>               - Scan for devices for <duration> seconds" << endl;
+            cout << " 2. CONNECT <id> <password>       - Connect to device with <id> using <password>" << endl;
+            cout << " 3. POWER <ON/OFF>               - Power ON/OFF device" << endl;
+            cout << " 4. TAKE_CONTROL                - Take control of the device" << endl;
+            cout << " 5. TIMER                    - Set timer to power ON/OFF device after specified minutes" << endl;
+            cout << " 6. CANCEL_CONTROL                - Cancel current control operations" << endl;
+            cout << " 7. CHANGE_PW <id> <current_pw> <new_pw> - Change password for device with <id>" << endl;
+            cout << " 8. QUERY                         - Query device for status, sensor data, usage, config or all" << endl;
+            cout << " 9. CONFIG <id> <param> <value>  - Change configuration parameter for device with <id>" << endl;
+            cout << " 10. EXIT                          - Exit the application" << endl;
+            cout << " 11. HELP                          - Show help for commands" << endl;
             cout << "===============================" << endl;
             cout << ">> ";
+            int cmd;
+            cin >> cmd;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-            string input;
-            getline(cin, input);
-            stringstream ss(input);
-            string cmd;
-            ss >> cmd;
-            if (cmd == "SCAN")
+            if (cmd == 1)
             {
                 float duration;
                 ss >> duration;
                 device_list = broadcast(port, duration);
             }
-            else if (cmd == "LIST")
-            {
-                for (size_t idx = 0; idx < device_list.size(); idx++)
-                {
-                    DeviceInfo& di = device_list[idx];
-                    cout << idx << ": " << di.id << " " << di.name << " "
-                         << inet_ntoa(di.addr.sin_addr) << ":"
-                         << ntohs(di.addr.sin_port) << endl;
-                }
-            }
-            else if (cmd == "CONNECT")
+            else if (cmd == 2)
             {
                 string id;
                 string pass;
@@ -209,117 +204,109 @@ int main(int argc, char** argv)
                     if (new_device) devices.push_back(new_device);
                 }                   
             }
-            else if (cmd == "POWER_ON" || cmd == "POWER_OFF")
+            else if (cmd == 3)
             {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
+                Device* selected_device = listDeviceToSelect(devices);
+                if (!selected_device)
+                    continue;
+                if (selected_device->info.token.empty()) {
+                    cout << " Device not connected properly." << endl;
                     continue;
                 }
-                call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token);
-            }
-            else if (cmd == "WATER_NOW")
-            {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
-                    continue;
-                }
-                cout << "Enter watering amount in liters (input 0 for default, -1 for cancel): ";
-                float amount;
-                cin >> amount;
+                cout << "Enter power state (0 for ON, 1 for OFF): ";
+                int state;
+                cin >> state;
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                if (amount < -1)
-                {
-                    cout << " Invalid watering amount" << endl;
+                if (state != 0 && state != 1) {
+                    cout << " Invalid power state." << endl;
                     continue;
                 }
-                if (amount == -1)
-                {
-                    cout << "Watering cancelled." << endl;
-                    continue;
-                }
-                call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token + " " + to_string(amount));
+                string power_state = (state == 0) ? "POWER_ON" : "POWER_OFF";
+                call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token + " " + power_state);
             }
-            else if (cmd == "FERTILIZE_NOW")
+            else if (cmd == 4)
             {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
+                Device* selected_device = listDeviceToSelect(devices);
+                if (!selected_device)
+                    continue;
+                if (selected_device->info.token.empty()) {
+                    cout << " Device not connected properly." << endl;
                     continue;
                 }
-                cout << "Enter Enter the parameters according to the following pattern: V=2.5 (0 for defaut): ";
-                cout << "Enter 'cancel' to cancel fertilizing." << endl;
-                cout << "Enter 'done' to proceed." << endl;
-                cout << "Parameters list:" << endl;
-                cout << "V - Fertilizing volume in liters" << endl;
-                cout << "CP - Concentration of phosphorus in mg/L" << endl;
-                cout << "CK - Concentration of potassium in mg/L" << endl;
-                cout << "CN - Concentration of nitrogen in mg/L" << endl;
-                string fert_input;
-                map<string, float> fert_params;
-                while (true)
-                {
-                    cout << "Fertilizing parameter: ";
-                    getline(cin, fert_input);
-                    if (fert_input == "cancel")
-                    {
-                        cout << "Fertilizing cancelled." << endl;
-                        break;
-                    }
-                    if (fert_input == "done")
-                    {
-                        stringstream param_ss;
-                        param_ss << cmd << " " << devices[connected_devive_id]->info.token << " ";
-                        for (const auto& p : fert_params)
-                            param_ss << p.first << "=" << p.second << " ";
-                        call_api(devices[connected_devive_id]->sockfd, param_ss.str());
-                        break;
-                    }
-                    size_t eq_pos = fert_input.find('=');
-                    if (eq_pos == string::npos)
-                    {
-                        cout << "Invalid parameter format" << endl;
+                if (selected_device->info.type == SPRINKLER) {
+                    cout << "Enter watering amount in liters (input 0 for default, -1 to cancel): ";
+                    int amount;
+                    cin >> amount;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (amount == -1) {
+                        cout << "Watering cancelled." << endl;
                         continue;
                     }
-                    string key = fert_input.substr(0, eq_pos);
-                    float value = stof(fert_input.substr(eq_pos + 1));
-                    fert_params[key] = value;
+                    call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token + " " + to_string(amount));
+                }
+                else if (selected_device->info.type == FERTILIZER) {
+                    // Nhập nồng độ phân đạm
+                    cout << "Enter the Concentration of nitrogen in mg/L (input 0 for default, -1 to cancel): ";
+                    int cn;
+                    cin >> cn;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (cn == -1) {
+                        cout << "Fertilizing cancelled." << endl;
+                        continue;
+                    }
+                    cout << "Enter the Concentration of phosphorus in mg/L (input 0 for default, -1 to cancel): ";
+                    int cp;
+                    cin >> cp;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (cp == -1) {
+                        cout << "Fertilizing cancelled." << endl;
+                        continue;
+                    }
+                    cout << "Enter the Concentration of potassium in mg/L (input 0 for default, -1 to cancel): ";
+                    int ck;
+                    cin >> ck;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (ck == -1) {
+                        cout << "Fertilizing cancelled." << endl;
+                        continue;
+                    }
+                    cout << "Enter the volume to fertilize in liters (input 0 for default, -1 to cancel): ";
+                    int volume;
+                    cin >> volume;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (volume == -1) {
+                        cout << "Fertilizing cancelled." << endl;
+                        continue;
+                    }
+                    call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token + " " + to_string(cn) + " " + to_string(cp) + " " + to_string(ck) + " " + to_string(volume));
+                }
+                else if (selected_device->info.type == LIGHTING) {
+                    cout << "Enter lighting duration in minutes (input -1 to cancel): ";
+                    int duration;
+                    cin >> duration;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (duration == -1) {
+                        cout << "Lighting cancelled." << endl;
+                        continue;
+                    }
+                    cout << "Enter lighting power in Watts (input 0 for default, -1 to cancel): ";
+                    int power;
+                    cin >> power;
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    if (power == -1) {
+                        cout << "Lighting cancelled." << endl;
+                        continue;
+                    }
+                    call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token + " " + to_string(duration) + " " + to_string(power));
                 }
             }
-            else if (cmd == "LIGHT_NOW")
+            else if (cmd == 5)
             {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
+                Device* selected_device = listDeviceToSelect(devices);
+                if (!selected_device)
                     continue;
-                }
-                // Nhập thời gian chiếu sáng và công suất ánh sáng
-                cout << "Enter lighting duration in minutes: (-1 to cancel) ";
-                int duration;
-                cin >> duration;
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                if (duration == -1)
-                {
-                    cout << "Lighting cancelled." << endl;
-                    continue;
-                }
-                cout << "Enter lighting power in Watts: (0 for default, -1 to cancel) ";
-                int power;
-                cin >> power;
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                if (power == -1)
-                {
-                    cout << "Lighting cancelled." << endl;
-                    continue;
-                }
-                call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token + " " + to_string(duration) + " " + to_string(power));
-            }
-            else if (cmd == "TIMER")
-            {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
+                if (selected_device->info.token.empty()) {
+                    cout << " Device not connected properly." << endl;
                     continue;
                 }
                 cout << "Enter state (0 to ON, 1 to OFF, -1 to cancel): ";
@@ -331,7 +318,6 @@ int main(int argc, char** argv)
                     cout << "Timer setting cancelled." << endl;
                     continue;
                 }
-                string timer_state = (state == 0) ? "POWER_ON" : "POWER_OFF";
                 
                 cout << "Enter time to perform action (minutes from now, -1 to cancel): ";
                 int minutes;
@@ -342,16 +328,18 @@ int main(int argc, char** argv)
                     cout << "Timer setting cancelled." << endl;
                     continue;
                 }
-                call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token + " " + timer_state + " " + to_string(minutes));
+                call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token + " " + to_string(state) + " " + to_string(minutes));
             }
-            else if (cmd == "CANCEL_CONTROL")
+            else if (cmd == 6)
             {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
+                Device* selected_device = listDeviceToSelect(devices);
+                if (!selected_device)
+                    continue;
+                if (selected_device->info.token.empty()) {
+                    cout << " Device not connected properly." << endl;
                     continue;
                 }
-                call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token);
+                call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token);
             }
             else if (cmd == "CHANGE_PW")
             {
@@ -363,22 +351,16 @@ int main(int argc, char** argv)
                 else
                     change_password(devices[idx], current_pass, new_pass);
             }
-            else if (cmd == "QUERY")
+            else if (cmd == 8)
             {
-                if (connected_devive_id < 0)
-                {
-                    cout << " No device connected" << endl;
+                Device* selected_device = listDeviceToSelect(devices);
+                if (!selected_device)
+                    continue;
+                if (selected_device->info.token.empty()) {
+                    cout << " Device not connected properly." << endl;
                     continue;
                 }
-                cout << "Enter scope (STATUS, SENSORS, USAGE, CONFIG, ALL or let blank for default, -1 to cancel): ";
-                string scope;
-                getline(cin, scope);
-                if (scope == "-1")
-                {
-                    cout << "Query cancelled." << endl;
-                    continue;
-                }
-                call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token + (scope.empty() ? "" : " " + scope));
+                call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token);
             }
             else if (cmd == "CONFIG")
             {

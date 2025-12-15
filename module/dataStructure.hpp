@@ -3,12 +3,20 @@
 
 #include "../dependencies/index.hpp"
 
+enum DeviceType
+{
+    SPRINKLER,
+    FERTILIZER,
+    LIGHTING
+};
+
 typedef struct
 {
     std::string id;
     std::string name;
     struct sockaddr_in addr;
     std::string token;
+    enum DeviceType type;
 } DeviceInfo;
 
 typedef struct Device
