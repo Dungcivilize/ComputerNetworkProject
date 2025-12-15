@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -std=c++11 -Wall -pthread
 
 # Source files
-APP_SRC = app.cpp module/common.cpp module/register.cpp module/index.cpp
+APP_SRC = app.cpp module/common.cpp module/register.cpp module/index.hpp
 SENSOR_SRC = sensor.cpp
 
 # Output binaries
