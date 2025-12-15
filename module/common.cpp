@@ -1,9 +1,7 @@
 #include <iostream>
 #include "common.hpp"
 #include <sstream>
-#include "../dependencies/framework.hpp"
-#include "../dependencies/streamtransmission.hpp"
-#include "../dependencies/utils.hpp"
+#include "../dependencies/index.hpp"
 #define BUFFER_SIZE 32787
 
 using namespace std;

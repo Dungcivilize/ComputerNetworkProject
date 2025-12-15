@@ -1,24 +1,6 @@
 #include "dependencies/index.hpp"
 #include "module/index.hpp"
 
-typedef struct
-{
-    string id;
-    string name;
-    struct sockaddr_in addr;
-    string token;
-} DeviceInfo;
-
-typedef struct Device
-{
-    DeviceInfo info;
-    int sockfd;
-
-    Device(DeviceInfo info, int sockfd) : info(info), sockfd(sockfd) {}
-
-    ~Device() { close(sockfd); }
-} Device;
-
 vector<DeviceInfo> broadcast(uint16_t port, float duration)
 {
     vector<DeviceInfo> devices;
