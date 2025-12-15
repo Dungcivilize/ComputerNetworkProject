@@ -1,7 +1,7 @@
 #include "dependencies/framework.hpp"
 #include "dependencies/identity.hpp"
 #include "dependencies/utils.hpp"
-#include "module/index.cpp"
+#include "module/index.hpp"
 
 typedef struct
 {

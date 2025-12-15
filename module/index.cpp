@@ -1,2 +1,2 @@
-#include "register.cpp"
-#include "common.cpp"
+#include "register.hpp"
+#include "common.hpp"

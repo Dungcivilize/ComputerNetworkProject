@@ -23,7 +23,7 @@ int register_app() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dist(1, INT_MAX);
-    int app_id = dist(gen);
+    app_id = dist(gen);
     
     std::ofstream file("app_id.data");
     if (file.is_open()) {
