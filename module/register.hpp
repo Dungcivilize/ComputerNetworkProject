@@ -1,4 +1,4 @@
 #pragma once
 
-int register_app(const std::string& app_name, const std::string& app_description, int& app_id);
+int register_app();
 void cancel_register();

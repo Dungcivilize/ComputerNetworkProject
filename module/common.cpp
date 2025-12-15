@@ -1,5 +1,12 @@
 #include <iostream>
 #include "common.hpp"
+#include <sstream>
+#include "../dependencies/framework.hpp"
+#include "../dependencies/streamtransmission.hpp"
+#include "../dependencies/utils.hpp"
+#define BUFFER_SIZE 32787
+
+using namespace std;
 int check_args(int argc, char* argv[]) {
     if (argc != 2) {
         printf("Usage: %s <port>\n", argv[0]);
@@ -13,31 +20,7 @@ int check_args(int argc, char* argv[]) {
     return port;
 }
 
-ssize_t send_message(int sockfd, std::string &message)
-{
-    char buf[BUFFER_SIZE];
-    int n = snprintf(buf, sizeof(buf), "%s\n", message.c_str());
-    if (n < 0)
-        return -1;
-    if (n >= (int)sizeof(buf))
-    {   
-        n = (int)sizeof(buf);
-        buf[n - 1] = '\n';
-    }
-    return send_all(sockfd, buf, n);
-}
-
-ssize_t recv_message(int sockfd, std::string& buf)
-{
-    char buffer[BUFFER_SIZE];
-    ssize_t n = recv_line(sockfd, buffer, sizeof(buffer));
-    if (n <= 0) return n;
-    trim(buffer);
-    buf.assign(buffer);
-    return n;
-}
-
-void call_api(int sockfd, const std::string& request) {
+void call_api(int sockfd, string request) {
     std::string response;
     if (send_message(sockfd, request) <= 0) {
         cout << "Failed to send message to device." << endl;
@@ -60,7 +43,7 @@ string hanlde_response(string response) {
         cout << "Power state changed to " << (action == "POWER_ON" ? "ON" : "OFF") << endl;
         cout << "Power consumption: " << power_data << " Watts" << endl;
     }
-    if (status_code % 100 != 0) {
+    if (stoi(status_code) % 100 != 0) {
         return;
     }
     if (action == "WATER_NOW") {
@@ -169,4 +152,7 @@ string get_status_message(int status_code) {
             return "Get device status successful.";
         case 501:
             return "Device not found.";
-            
+        default:
+            return "Unknown status code.";
+    }
+}

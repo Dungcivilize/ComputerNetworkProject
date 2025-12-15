@@ -1,6 +1,4 @@
-#include "dependencies/framework.hpp"
-#include "dependencies/identity.hpp"
-#include "dependencies/utils.hpp"
+#include "dependencies/index.hpp"
 #include "module/index.hpp"
 
 typedef struct
@@ -232,7 +230,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token);
@@ -241,7 +239,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 cout << "Enter watering amount in liters (input 0 for default, -1 for cancel): ";
@@ -250,7 +248,7 @@ int main(int argc, char** argv)
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 if (amount < -1)
                 {
-                    cout << to_string(ERROR_INVALID_PARAMETER) << " Invalid watering amount" << endl;
+                    cout << " Invalid watering amount" << endl;
                     continue;
                 }
                 if (amount == -1)
@@ -264,7 +262,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 cout << "Enter Enter the parameters according to the following pattern: V=2.5 (0 for defaut): ";
@@ -298,7 +296,7 @@ int main(int argc, char** argv)
                     size_t eq_pos = fert_input.find('=');
                     if (eq_pos == string::npos)
                     {
-                        cout << to_string(ERROR_INVALID_PARAMETER) << " Invalid parameter format" << endl;
+                        cout << "Invalid parameter format" << endl;
                         continue;
                     }
                     string key = fert_input.substr(0, eq_pos);
@@ -310,7 +308,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 // Nhập thời gian chiếu sáng và công suất ánh sáng
@@ -338,7 +336,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 cout << "Enter state (0 to ON, 1 to OFF, -1 to cancel): ";
@@ -367,7 +365,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 call_api(devices[connected_devive_id]->sockfd, cmd + " " + devices[connected_devive_id]->info.token);
@@ -386,7 +384,7 @@ int main(int argc, char** argv)
             {
                 if (connected_devive_id < 0)
                 {
-                    cout << to_string(ERROR_NO_DEVICE_CONNECTED) << " No device connected" << endl;
+                    cout << " No device connected" << endl;
                     continue;
                 }
                 cout << "Enter scope (STATUS, SENSORS, USAGE, CONFIG, ALL or let blank for default, -1 to cancel): ";

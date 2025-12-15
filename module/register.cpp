@@ -4,7 +4,7 @@
 #include <string>
 #include <cstdlib>
 #include "register.hpp"
-
+#include <climits>
 int check() {
     std::ifstream file("app_id.data");
     if (!file.is_open()) {
