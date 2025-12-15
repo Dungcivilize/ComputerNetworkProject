@@ -3,6 +3,7 @@
 #include <random>
 #include <string>
 #include <cstdlib>
+#include "register.hpp"
 
 int check() {
     std::ifstream file("app_id.data");
