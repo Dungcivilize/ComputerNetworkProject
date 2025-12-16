@@ -1,21 +1,31 @@
-CXX = g++
-CXXFLAGS = -std=c++11 -Wall -pthread
+CXX := g++
+CXXFLAGS := -std=c++11 -Wall -pthread
+INCLUDES := -I. -Icommon -Idependencies -Ihandler
 
-# Source files
-APP_SRC = app.cpp module/common.cpp module/register.cpp dependencies/streamtransmission.cpp dependencies/utils.cpp
-SENSOR_SRC = sensor.cpp dependencies/streamtransmission.cpp dependencies/utils.cpp
+# Gather sources from the current project layout
+COMMON_SRCS := $(wildcard common/*.cpp)
+DEPS_SRCS := $(wildcard dependencies/*.cpp)
+HANDLER_SRCS := $(wildcard handler/*.cpp)
 
-# Output binaries
-APP_BIN = app
-SENSOR_BIN = sensor
+APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
+SENSOR_SRCS := sensor.cpp dependencies/streamtransmission.cpp dependencies/utils.cpp
 
-all: $(APP_BIN) $(SENSOR_BIN)
+APP_OBJS := $(APP_SRCS:.cpp=.o)
+SENSOR_OBJS := $(SENSOR_SRCS:.cpp=.o)
 
-$(APP_BIN): $(APP_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $(APP_SRC)
+all: app sensor
 
-$(SENSOR_BIN): $(SENSOR_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $(SENSOR_SRC)
+.PHONY: all clean
+
+app: $(APP_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(APP_OBJS)
+
+sensor: $(SENSOR_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(SENSOR_OBJS)
+
+# Generic rule for compiling .cpp to .o
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -f $(APP_BIN) $(SENSOR_BIN)
+	rm -f *.o common/*.o dependencies/*.o handler/*.o app sensor

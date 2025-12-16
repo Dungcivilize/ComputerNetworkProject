@@ -20,7 +20,7 @@ int check_args(int argc, char* argv[]) {
     return port;
 }
 
-Device* listDeviceToSelect(vector<Device*>& devices) {
+Device* listDeviceToSelect(vector<Device*>& devices, bool accept_disconnected = false) {
     if (devices.empty()) {
         cout << "No devices connected." << endl;
         return NULL;
@@ -35,6 +35,10 @@ Device* listDeviceToSelect(vector<Device*>& devices) {
     cin >> index;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     if (index < 0 || static_cast<size_t>(index) >= devices.size()) {
+        return NULL;
+    }
+    if (!accept_disconnected && devices[index]->info.token.empty()) {
+        cout << " Device not connected properly." << endl;
         return NULL;
     }
     return devices[index];
