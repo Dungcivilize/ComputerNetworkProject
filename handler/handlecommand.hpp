@@ -1,3 +1,6 @@
 #pragma once
+#include <vector>
 #include <string>
-void handleCommand(vector<Device*>& devices, uint16_t port);
+#include "../common/index.hpp"
+
+void handleCommand(std::vector<Device*>& devices, uint16_t port);

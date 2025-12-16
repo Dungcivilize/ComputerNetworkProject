@@ -1,7 +1,7 @@
 #include "../common/index.hpp"
 #include "handleScan.hpp"
 
-vector<Device*> broadcast(uint16_t port, float duration)
+vector<DeviceInfo> broadcast(uint16_t port, float duration)
 {
     vector<DeviceInfo> devices;
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);

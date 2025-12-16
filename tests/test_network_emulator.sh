@@ -2,16 +2,16 @@
 
 # Nhận tham số từ command line, nếu không có thì dùng giá trị mặc định
 if [ "$1" == "clean" ]; then
-    echo "🧹 Đang dọn dẹp tất cả namespace và bridge..."
-    BRIDGE="br0"
+    echo "🧹 Đang dọn dẹp tất cả test namespace và bridge..."
+    BRIDGE="br0-test"
     COUNT=100  # Giả sử max 100
     for i in $(seq 1 $COUNT); do
-        ns="ns$i"
+        ns="ns${i}testemulator"
         if ip netns list | grep -q "^$ns$"; then
             echo "  Dừng process trong $ns..."
             ip netns pids $ns 2>/dev/null | xargs -r kill -9 2>/dev/null
             sleep 1
-            ip link delete veth${i}-br 2>/dev/null
+            ip link delete veth-test${i}-br 2>/dev/null
             sleep 1
             ip netns delete $ns 2>/dev/null
             rm -f /run/netns/$ns 2>/dev/null
@@ -35,9 +35,9 @@ BACKGROUND=${3:-false}
 BASE_IP=$(hostname -I | awk '{print $1}')
 IFS='.' read -r a b c d <<< "$BASE_IP"
 
-BRIDGE="br0"
+BRIDGE="br0-test"
 
-echo "📡 Khởi chạy với PORT=$PORT, COUNT=$COUNT, BACKGROUND=$BACKGROUND"
+echo "📡 Khởi chạy test với PORT=$PORT, COUNT=$COUNT, BACKGROUND=$BACKGROUND"
 
 # tạo bridge nếu chưa có
 ip link show $BRIDGE >/dev/null 2>&1
@@ -49,7 +49,7 @@ fi
 
 host_id=0
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}emulator"
+    ns="ns${i}testemulator"
     
     # tìm IP khả dụng
     while true; do
@@ -77,29 +77,29 @@ for i in $(seq 1 $COUNT); do
     ip netns add $ns
 
     # tạo veth pair
-    ip link add veth${i} type veth peer name veth${i}-br
-    ip link set veth${i} netns $ns
+    ip link add veth-test${i} type veth peer name veth-test${i}-br
+    ip link set veth-test${i} netns $ns
 
     # gán IP cho namespace
-    ip netns exec $ns ip addr add $ipaddr/24 dev veth${i}
-    ip netns exec $ns ip link set veth${i} up
+    ip netns exec $ns ip addr add $ipaddr/24 dev veth-test${i}
+    ip netns exec $ns ip link set veth-test${i} up
     ip netns exec $ns ip link set lo up
 
     # nối veth vào bridge
-    ip link set veth${i}-br master $BRIDGE
-    ip link set veth${i}-br up
+    ip link set veth-test${i}-br master $BRIDGE
+    ip link set veth-test${i}-br up
 
-    # chạy chương trình sensor
+    # chạy chương trình testEmulatorSensor
     sensor_port=$((PORT + i - 1))
     if [ "$BACKGROUND" == "true" ]; then
-        ip netns exec $ns ./sensor $sensor_port &
+        ip netns exec ns${i}testemulator ./testEmulatorSensor $sensor_port &
     else
-        gnome-terminal --title="Sensor $ns ($ipaddr:$sensor_port)" -- bash -c "ip netns exec $ns ./sensor $sensor_port; exec bash" &
+        gnome-terminal --title="TestSensor ns${i}testemulator ($ipaddr:$sensor_port)" -- bash -c "ip netns exec ns${i}testemulator ./testEmulatorSensor $sensor_port; exec bash" &
     fi
 done
 
 echo ""
-echo "✅ Đã khởi tạo xong $i namespace(s)"
+echo "✅ Đã khởi tạo xong $i namespace(s) cho test"
 echo "📝 Nhập 'exit' để dọn dẹp và thoát..."
 echo ""
 
@@ -113,11 +113,11 @@ done
 
 # Dọn dẹp
 echo ""
-echo "🧹 Đang dọn dẹp (bất đồng bộ)..."
+echo "🧹 Đang dọn dẹp..."
 
 # Kill tất cả process trong namespaces cùng lúc
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}emulator"
+    ns="ns${i}testemulator"
     if ip netns list | grep "^$ns\b"; then
         ip netns pids $ns 2>/dev/null | xargs -r kill -9 2>/dev/null &
     fi
@@ -125,18 +125,18 @@ done
 
 # Tắt tất cả terminals
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}emulator"
-    kill $(pgrep -f "Sensor $ns") 2>/dev/null &
+    ns="ns${i}testemulator"
+    kill $(pgrep -f "TestSensor $ns") 2>/dev/null &
 done
 
 # Xóa tất cả veth pairs
 for i in $(seq 1 $COUNT); do
-    ip link delete veth${i}-br 2>/dev/null &
+    ip link delete veth-test${i}-br 2>/dev/null &
 done
 
 # Xóa tất cả namespaces
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}emulator"
+    ns="ns${i}testemulator"
     ip netns delete $ns 2>/dev/null &
     rm -f /run/netns/$ns 2>/dev/null &
     echo "  ✓ Đã xóa $ns" &

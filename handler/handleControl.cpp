@@ -2,12 +2,12 @@
 
 void power_control(vector<Device*>& devices)
 {
-    selected_device = listDeviceToSelect(devices);
+    Device* selected_device = listDeviceToSelect(devices);
     if (!selected_device)
-        continue;
+        return;
     if (selected_device->info.token.empty()) {
         cout << " Device not connected properly." << endl;
-        continue;
+        return;
     }
     cout << "Enter power state (0 for ON, 1 for OFF): ";
     int state;
@@ -15,16 +15,16 @@ void power_control(vector<Device*>& devices)
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     if (state != 0 && state != 1) {
         cout << " Invalid power state." << endl;
-        continue;
+        return;
     }
     call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(state));
 }
 
 void take_control(vector<Device*>& devices)
 {
-    selected_device = listDeviceToSelect(devices);
+    Device* selected_device = listDeviceToSelect(devices);
     if (!selected_device)
-        continue;
+        return;
     if (selected_device->info.type == SPRINKLER) {
         cout << "Enter watering amount in liters (input 0 for default, -1 to cancel): ";
         int amount;
@@ -32,7 +32,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (amount == -1) {
             cout << "Watering cancelled." << endl;
-            continue;
+            return;
         }
         call_api(selected_device->sockfd, to_string(4) + " " + selected_device->info.token + " " + to_string(amount));
     }
@@ -44,7 +44,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (cn == -1) {
             cout << "Fertilizing cancelled." << endl;
-            continue;
+            return;
         }
         cout << "Enter the Concentration of phosphorus in mg/L (input 0 for default, -1 to cancel): ";
         int cp;
@@ -52,7 +52,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (cp == -1) {
             cout << "Fertilizing cancelled." << endl;
-            continue;
+            return;
         }
         cout << "Enter the Concentration of potassium in mg/L (input 0 for default, -1 to cancel): ";
         int ck;
@@ -60,7 +60,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (ck == -1) {
             cout << "Fertilizing cancelled." << endl;
-            continue;
+            return;
         }
         cout << "Enter the volume to fertilize in liters (input 0 for default, -1 to cancel): ";
         int volume;
@@ -68,7 +68,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (volume == -1) {
             cout << "Fertilizing cancelled." << endl;
-            continue;
+            return;
         }
         call_api(selected_device->sockfd, to_string(4) + " " + selected_device->info.token + " " + to_string(cn) + " " + to_string(cp) + " " + to_string(ck) + " " + to_string(volume));
     }
@@ -79,7 +79,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (duration == -1) {
             cout << "Lighting cancelled." << endl;
-            continue;
+            return;
         }
         cout << "Enter lighting power in Watts (input 0 for default, -1 to cancel): ";
         int power;
@@ -87,7 +87,7 @@ void take_control(vector<Device*>& devices)
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (power == -1) {
             cout << "Lighting cancelled." << endl;
-            continue;
+            return;
         }
         call_api(selected_device->sockfd, to_string(4) + " " + selected_device->info.token + " " + to_string(duration) + " " + to_string(power));
     }
@@ -95,9 +95,9 @@ void take_control(vector<Device*>& devices)
 
 void set_timer(vector<Device*>& devices)
 {
-    selected_device = listDeviceToSelect(devices);
+    Device* selected_device = listDeviceToSelect(devices);
     if (!selected_device)
-        continue;
+        return;
     cout << "Enter state (0 to ON, 1 to OFF, -1 to cancel): ";
     int state;
     cin >> state;
@@ -105,7 +105,7 @@ void set_timer(vector<Device*>& devices)
     if (state == -1)
     {
         cout << "Timer setting cancelled." << endl;
-        continue;
+        return;
     }
 
     cout << "Enter time to perform action (minutes from now, -1 to cancel): ";
@@ -115,15 +115,15 @@ void set_timer(vector<Device*>& devices)
     if (minutes == -1)
     {
         cout << "Timer setting cancelled." << endl;
-        continue;
+        return;
     }
     call_api(selected_device->sockfd, to_string(5) + " " + selected_device->info.token + " " + to_string(state) + " " + to_string(minutes));
 }   
 
 void cancel_control(vector<Device*>& devices)
 {
-    selected_device = listDeviceToSelect(devices);
+    Device* selected_device = listDeviceToSelect(devices);
     if (!selected_device)
-        continue;
+        return;
     call_api(selected_device->sockfd, to_string(6) + " " + selected_device->info.token);
 }

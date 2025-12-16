@@ -20,7 +20,7 @@ int check_args(int argc, char* argv[]) {
     return port;
 }
 
-Device* listDeviceToSelect(vector<Device*>& devices, bool accept_disconnected = false) {
+Device* listDeviceToSelect(vector<Device*>& devices, bool accept_disconnected) {
     if (devices.empty()) {
         cout << "No devices connected." << endl;
         return NULL;

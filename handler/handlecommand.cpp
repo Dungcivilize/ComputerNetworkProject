@@ -3,6 +3,7 @@
 #include "handleScan.hpp"
 #include "handleConnect.hpp"
 #include "handleControl.hpp"
+#include "handleChangeInfo.hpp"
 
 #include "../common/index.hpp"
 #include "utils.hpp"
@@ -10,8 +11,9 @@
 #include <sstream>
 
 // Hàm xử lý lệnh nhập vào, tách từng lệnh và gọi module tương ứng
-void handleCommand(vector<Device*>& devices, uint16_t port) {
+void handleCommand(std::vector<Device*>& devices, uint16_t port) {
     Device* selected_device = nullptr;
+    std::vector<DeviceInfo> device_list;
     
     cout << "===============================" << endl;
     cout << "Available commands:" << endl;
@@ -28,21 +30,21 @@ void handleCommand(vector<Device*>& devices, uint16_t port) {
     cout << " 11. HELP                          - Show help for commands" << endl;
     cout << "===============================" << endl;
     cout << ">> ";
-    int cmd;
+    string cmd;
     cin >> cmd;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
-    if (cmd == 1)
+    if (cmd == "1")
     {
         float duration;
-        ss >> duration;
+        cin >> duration;
         device_list = broadcast(port, duration);
     }
-    else if (cmd == 2)
+    else if (cmd == "2")
     {
         string id;
         string pass;
-        ss >> id >> pass;
+        cin >> id >> pass;
         ssize_t idx = find_device_info_by_id(device_list, id);
         if (idx < 0)
             cout << to_string(ERROR_UNKNOWN_TOKEN) << " No such id exist" << endl;
@@ -52,43 +54,43 @@ void handleCommand(vector<Device*>& devices, uint16_t port) {
             if (new_device) devices.push_back(new_device);
         }                   
     }
-    else if (cmd == 3)
+    else if (cmd == "3")
         power_control(devices);
-    else if (cmd == 4)
+    else if (cmd == "4")
         take_control(devices);
-    else if (cmd == 5)
+    else if (cmd == "5")
         set_timer(devices);
-    else if (cmd == 6)
+    else if (cmd == "6")
         cancel_control(devices);
     else if (cmd == "CHANGE_PW")
     {
         string id, current_pass, new_pass;
-        ss >> id >> current_pass >> new_pass;
+        cin >> id >> current_pass >> new_pass;
         ssize_t idx = find_device_by_id(devices, id);
         if (idx < 0)
             cout << to_string(ERROR_UNKNOWN_TOKEN) << " No such id exist" << endl;
         else
             change_password(devices[idx], current_pass, new_pass);
     }
-    else if (cmd == 8)
+    else if (cmd == "8")
     {
         selected_device = listDeviceToSelect(devices);
         if (!selected_device)
-            continue;
-        call_api(selected_device->sockfd, to_string(cmd) + " " + selected_device->info.token);
+            return;
+        call_api(selected_device->sockfd, to_string(8) + " " + selected_device->info.token);
     }
     else if (cmd == "CONFIG")
     {
         string id, param;
         float value;
-        ss >> id >> param >> value;
+        cin >> id >> param >> value;
         ssize_t idx = find_device_by_id(devices, id);
         if (idx < 0)
             cout << to_string(ERROR_UNKNOWN_TOKEN) << " No such id exist" << endl;
         else
             change_param(devices[idx], param, value);
     }
-    else if (cmd == "EXIT") break;
+    else if (cmd == "EXIT") return;
     else
         cout << to_string(ERROR_UNKNOWN_COMMAND) << " Uknown command" << endl;
 }

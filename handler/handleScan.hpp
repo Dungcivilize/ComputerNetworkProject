@@ -1,4 +1,4 @@
 #include <vector>
 #include "../common/index.hpp"
 
-vector<Device*> broadcast(unit16_t port, float duration);
+vector<DeviceInfo> broadcast(uint16_t port, float duration);
