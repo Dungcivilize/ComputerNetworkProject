@@ -9,6 +9,9 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netdb.h>
 
 using namespace std;
 
@@ -56,20 +59,54 @@ string recv_line(int sock)
     return res;
 }
 
+static bool get_local_ipv4(string &out_ip)
+{
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) return false;
+    bool found = false;
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) continue;
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+            // skip loopback
+            if (ifa->ifa_flags & IFF_LOOPBACK) continue;
+            char host[NI_MAXHOST];
+            int s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if (s == 0) {
+                out_ip = string(host);
+                found = true;
+                break;
+            }
+        }
+    }
+    freeifaddrs(ifaddr);
+    return found;
+}
+
 int main(int argc, char* argv[])
 {
-    if (argc < 6) {
-        cout << "Usage: test_sensor_client [BASE_IP] [START] [END] [PORT] [MY_IP_LAST_OCTET]" << endl;
-        cout << "Example: test_sensor_client 192.168.1 2 254 9000 1" << endl;
+    uint16_t port = 9000;
+    if (argc >= 2) port = (uint16_t)atoi(argv[1]);
+
+    string local_ip;
+    if (!get_local_ipv4(local_ip)) {
+        cerr << "Failed to detect local IPv4 address." << endl;
         return 1;
     }
-    string base = argv[1];
-    int start = atoi(argv[2]);
-    int end = atoi(argv[3]);
-    uint16_t port = (uint16_t)atoi(argv[4]);
-    int mylast = atoi(argv[5]);
+    // extract base (first 3 octets) and last octet
+    vector<string> parts;
+    stringstream sp(local_ip);
+    string item;
+    while (getline(sp, item, '.')) parts.push_back(item);
+    if (parts.size() != 4) {
+        cerr << "Unexpected local IP format: " << local_ip << endl;
+        return 1;
+    }
+    string base = parts[0] + "." + parts[1] + "." + parts[2];
+    int mylast = atoi(parts[3].c_str());
 
-    for (int i = start; i <= end; ++i) {
+    cout << "Local IP detected: " << local_ip << " — scanning " << base << ".1-254 on port " << port << " (skipping " << mylast << ")" << endl;
+
+    for (int i = 1; i <= 254; ++i) {
         if (i == mylast) continue;
         string ip = base + "." + to_string(i);
         int s = connect_to(ip, port);
@@ -83,14 +120,13 @@ int main(int argc, char* argv[])
         close(s);
     }
 
-    // Example: try connect to specific address (first successful)
+    // Attempt CONNECT to first reachable sensor
     cout << "\nAttempting CONNECT to first reachable sensor..." << endl;
-    for (int i = start; i <= end; ++i) {
+    for (int i = 1; i <= 254; ++i) {
         if (i == mylast) continue;
         string ip = base + "." + to_string(i);
         int s = connect_to(ip, port);
         if (s < 0) continue;
-        // send connect: 2 <app_id> <password>
         send_line(s, "2 1 password");
         string resp = recv_line(s);
         cout << ip << " -> " << resp << endl;
