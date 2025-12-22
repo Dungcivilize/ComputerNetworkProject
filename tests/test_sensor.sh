@@ -41,10 +41,65 @@ for i in $(seq 1 $COUNT); do
 
     sensor_port=$((PORT + i - 1))
     if [ "$BACKGROUND" == "true" ]; then
-        ip netns exec $ns ./tests/test_sensor $sensor_port sensor_${i} name_${i} password_${i} &
+        ip netns exec $ns ./test_sensor $sensor_port sensor_${i} name_${i} password_${i} &
     else
-        ip netns exec $ns ./tests/test_sensor $sensor_port sensor_${i} name_${i} password_${i}
+        gnome-terminal -- ip netns exec $ns ./test_sensor $sensor_port sensor_${i} name_${i} password_${i}
     fi
 done
 
 echo "Launched $COUNT sensors. Example client scan: ./tests/test_sensor_client 192.168.1 2 $((COUNT+1)) $PORT 1"
+
+echo ""
+echo "✅ Đã khởi tạo xong $i namespace(s) cho test"
+echo "📝 Nhập 'exit' để dọn dẹp và thoát..."
+echo ""
+
+# Chờ lệnh exit
+while true; do
+    read -p "> " cmd
+    if [ "$cmd" == "exit" ]; then
+        break
+    fi
+done
+
+# Dọn dẹp
+echo ""
+echo "🧹 Đang dọn dẹp..."
+
+# Kill tất cả process trong namespaces cùng lúc
+for i in $(seq 1 $COUNT); do
+    ns="ns${i}testemulator"
+    if ip netns list | grep "^$ns\b"; then
+        ip netns pids $ns 2>/dev/null | xargs -r kill -9 2>/dev/null &
+    fi
+done
+
+# Tắt tất cả terminals
+for i in $(seq 1 $COUNT); do
+    ns="ns${i}testemulator"
+    kill $(pgrep -f "TestSensor $ns") 2>/dev/null &
+done
+
+# Xóa tất cả veth pairs
+for i in $(seq 1 $COUNT); do
+    ip link delete veth-test${i}-br 2>/dev/null &
+done
+
+# Xóa tất cả namespaces
+for i in $(seq 1 $COUNT); do
+    ns="ns${i}testemulator"
+    ip netns delete $ns 2>/dev/null &
+    rm -f /run/netns/$ns 2>/dev/null &
+    echo "  ✓ Đã xóa $ns" &
+done &
+
+# Xóa bridge (chạy sau khi các background hoàn tất)
+wait
+if ip link show $BRIDGE >/dev/null 2>&1; then
+    ip link set $BRIDGE down
+    ip link delete $BRIDGE
+    echo "  ✓ Đã xóa bridge $BRIDGE"
+fi
+
+echo ""
+echo "✅ Dọn dẹp hoàn tất!"
