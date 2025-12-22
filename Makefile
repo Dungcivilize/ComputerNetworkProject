@@ -5,6 +5,7 @@ INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver
 # Gather sources from the current project layout
 COMMON_SRCS := $(wildcard common/*.cpp)
 DEPS_SRCS := $(wildcard dependencies/*.cpp)
+DEPS_OBJS := $(DEPS_SRCS:.cpp=.o)
 HANDLER_SRCS := $(wildcard handler/*.cpp)
 
 APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
@@ -30,8 +31,8 @@ app: $(APP_OBJS)
 
 # `sensor` is a header-only class now; build test binaries that use it instead.
 
-test_sensor: $(TEST_SENSOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor $(TEST_SENSOR_OBJS)
+test_sensor: $(TEST_SENSOR_OBJS) $(DEPS_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor $(TEST_SENSOR_OBJS) $(DEPS_OBJS)
 
 test_sensor_client: $(TEST_SENSOR_CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor_client $(TEST_SENSOR_CLIENT_OBJS)
