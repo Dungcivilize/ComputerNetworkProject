@@ -81,7 +81,7 @@ std::string handle_response(std::string response) {
         }
     }
     else {
-        cout << "Unhandled action: " << action << endl;
+        cout << "Unhandled action response." << endl;
     }
     return "";
 }
