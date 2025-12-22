@@ -68,7 +68,7 @@ echo "🧹 Đang dọn dẹp..."
 
 # Kill tất cả process trong namespaces cùng lúc
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}testemulator"
+    ns="ns${i}testsensor"
     if ip netns list | grep "^$ns\b"; then
         ip netns pids $ns 2>/dev/null | xargs -r kill -9 2>/dev/null &
     fi
@@ -76,7 +76,7 @@ done
 
 # Tắt tất cả terminals
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}testemulator"
+    ns="ns${i}testsensor"
     kill $(pgrep -f "TestSensor $ns") 2>/dev/null &
 done
 
@@ -87,7 +87,7 @@ done
 
 # Xóa tất cả namespaces
 for i in $(seq 1 $COUNT); do
-    ns="ns${i}testemulator"
+    ns="ns${i}testsensor"
     ip netns delete $ns 2>/dev/null &
     rm -f /run/netns/$ns 2>/dev/null &
     echo "  ✓ Đã xóa $ns" &
