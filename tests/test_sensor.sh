@@ -43,7 +43,7 @@ for i in $(seq 1 $COUNT); do
     if [ "$BACKGROUND" == "true" ]; then
         ip netns exec $ns ./test_sensor $sensor_port sensor_${i} name_${i} password_${i} &
     else
-        gnome-terminal -- title="test_sensor $ns" -- bash -c "ip netns exec $ns ./test_sensor $sensor_port sensor_${i} name_${i} password_${i}; exec bash"
+        gnome-terminal -- title="TestSensor ns${i}testsensor ($ipaddr:$sensor_port)" -- bash -c "ip netns exec ns${i}testsensor ./test_sensor $sensor_port sensor_${i} name_${i} password_${i}; exec bash"
     fi
 done
 
