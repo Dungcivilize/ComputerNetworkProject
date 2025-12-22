@@ -13,8 +13,8 @@
 class Sensor
 {
 public:
-    string ID;
-    string TYPE;
+    string id;
+    string sensor_type;
     string name;
     string pass;
     float T = 0;
@@ -24,11 +24,11 @@ public:
 
     Sensor(uint16_t port, const string& sensor_id, const string& sensor_name, const string& sensor_pass)
     {
-        ID = sensor_id;
+        id = sensor_id;
         name = sensor_name;
         pass = sensor_pass;
         tcpid = create_identity(port, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, INADDR_ANY);
-        TYPE = "SENSOR";
+        sensor_type = "SENSOR";
     }
 
     // Generate a token derived from sensor name and random entropy
@@ -85,7 +85,7 @@ public:
             stringstream ss(buf);
             ss >> cmd;
             if (cmd == "1") {
-                response = "100 " + ID + " " + name + " " + TYPE;
+                response = "100 " + id + " " + name + " " + sensor_type;
                 send_message(clientfd, response);
             } else if (cmd == "2") {
                 int app_id_parsed;
