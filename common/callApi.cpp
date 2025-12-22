@@ -21,43 +21,46 @@ void call_api(int sockfd, string request) {
 }
 
 std::string handle_response(std::string response) {
-    string action, status_code, power_data, data;
+    string status_code, power_data, data;
     stringstream ss(response);
-    ss >> action >> status_code >> power_data;
-    getline(ss, data);
+    ss >> status_code;
     cout << get_status_message(stoi(status_code)) << endl;
-    if (action == "POWER_ON" || action == "POWER_OFF") {
-        cout << "Power state changed to " << (action == "POWER_ON" ? "ON" : "OFF") << endl;
-        cout << "Power consumption: " << power_data << " Watts" << endl;
-    }
-    if (stoi(status_code) % 100 != 0) {
+    if (stoi(status_code) % 10 != 0) {
         return "";
     }
-    if (action == "WATER_NOW") {
+    if (status_code == "310") {
+        ss >> power_data >> data;
+        cout << "Power state changed to " << (data == "1" ? "ON" : "OFF") << endl;
+        cout << "Power consumption: " << power_data << " Watts" << endl;
+    }
+    if (status_code == "320") {
+        ss >> power_data >> data;
         cout << "Watering amount: " << data << " Liters" << endl;
         cout << "Power consumption: " << power_data << " Watts" << endl;
     }
-    else if (action == "FERTILIZE_NOW") {
+    else if (status_code == "330") {
+        ss >> power_data;
+        getline(ss, data);
         cout << "Fertilizing amount: " << endl;
         stringstream data_ss(data);
         string item;
-        while (getline(data_ss, item, ' ')) {
+        while (getline(data_ss, item, '|')) {
             if (!item.empty()) {
                 cout << "-  " << item << endl;
             }
         }
         cout << "Power consumption: " << power_data << " Watts" << endl;
     }
-    else if (action == "LIGHT_NOW") {
-        cout << "Lighting duration and power set." << endl;
+    else if (status_code == "340") {
         int duration = 0, power = 0;
-        stringstream data_ss(data);
-        data_ss >> duration >> power;
+        ss >> power_data >> duration >> power;
+        cout << "Lighting duration and power set." << endl;
         cout << "Duration: " << duration << " minutes" << endl;
         cout << "Power: " << power << " Watts" << endl;
         cout << "Power consumption: " << power_data << " Watts" << endl;
     }
-    else if (action == "TIMER") {
+    else if (status_code == "350") {
+        ss >> power_data >> data;
         // Tính thời điểm thực hiện hành động
         time_t current_time = time(nullptr);
         int minutes = stoi(data);
@@ -67,10 +70,7 @@ std::string handle_response(std::string response) {
         cout << "Action scheduled at: " << time_str << endl;
         cout << "Power consumption: (expected) " << power_data << " Watts" << endl;
     }
-    else if (action == "CANCEL_CONTROL") {
-        cout << "Scheduled action cancelled." << endl;
-    }
-    else if (action == "QUERY") {
+    else if (status_code == "500") {
         cout << "Device Data:" << endl;
         stringstream data_ss(data);
         string item;
@@ -105,7 +105,7 @@ string get_status_message(int status_code) {
         case 1:
             return "Invalid parameters provided.";
         case 2:
-            return "Authentication failed. Invalid token or app ID.";
+            return "Authentication failed. Invalid token.";
         case 3: 
             return "Invalid command format.";
         case 4:
@@ -121,21 +121,35 @@ string get_status_message(int status_code) {
         case 304:
             return "Device not found.";
         case 310:
-            return "Device's power state already on.";
+            return "Device power state changed successfully.";
         case 311:
+            return "Device's power state already on.";
+        case 312:
             return "Device's power state already off.";
         case 320:
-            return "Humidity reaches its maximum threshold. Watering not started.";
+            return "Watering started successfully.";
         case 321:
+            return "Humidity reaches its maximum threshold. Watering not started.";
+        case 322:
             return "Insufficient water in the tank. Watering not started.";
+        case 330:
+            return "Fertilizing started successfully.";
         case 340:
-            return "Device already has a timer set.";
-        case 341:
-            return "Device already on";
-        case 342:
-            return "Device already off";
+            return "Lighting started successfully.";
         case 350:
+            return "Timer set successfully.";
+        case 351:
+            return "Device already has a timer set.";
+        case 352:
+            return "Device already on";
+        case 353:
+            return "Device already off";
+        case 354:
             return "No action to cancel.";
+        case 360:
+            return "Scheduled action cancelled successfully.";
+        case 361:
+            return "No scheduled action to cancel.";
         case 500:
             return "Get device status successful.";
         case 501:

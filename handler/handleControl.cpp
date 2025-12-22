@@ -1,6 +1,6 @@
 #include "../common/index.hpp"
 
-void power_control(vector<Device*>& devices)
+void handleControl(std::vector<Device*>& devices)
 {
     Device* selected_device = listDeviceToSelect(devices);
     if (!selected_device)
@@ -9,6 +9,49 @@ void power_control(vector<Device*>& devices)
         cout << " Device not connected properly." << endl;
         return;
     }
+    cout << "Available control options:" << endl;
+    cout << "1. Power Control" << endl;
+    switch (selected_device->info.type) {
+        case SPRINKLER:
+            cout << "2. Watering Control" << endl;
+            break;
+        case FERTILIZER:
+            cout << "2. Fertilizing Control" << endl;
+            break;
+        case LIGHTING:
+            cout << "2. Lighting Control" << endl;
+            break;
+        default:
+            cout << " Unknown device type." << endl;
+            return;
+    }
+    cout << "3. Set Timer" << endl;
+    cout << "4. Cancel Control" << endl;
+    cout << "Select an option (1-4): ";
+    int option;
+    cin >> option;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    switch (option) {
+        case 1:
+            power_control(selected_device);
+            break;
+        case 2:
+            take_control(selected_device);
+            break;
+        case 3:
+            set_timer(selected_device);
+            break;
+        case 4:
+            cancel_control(selected_device);
+            break;
+        default:
+            cout << " Invalid option selected." << endl;
+            break;
+    }
+}
+void power_control(Device* selected_device)
+{
     cout << "Enter power state (0 for ON, 1 for OFF): ";
     int state;
     cin >> state;
@@ -17,12 +60,11 @@ void power_control(vector<Device*>& devices)
         cout << " Invalid power state." << endl;
         return;
     }
-    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(state));
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + (state==0 ? "POWER_ON" : "POWER_OFF"));
 }
 
-void take_control(vector<Device*>& devices)
+void take_control(Device* selected_device)
 {
-    Device* selected_device = listDeviceToSelect(devices);
     if (!selected_device)
         return;
     if (selected_device->info.type == SPRINKLER) {
@@ -89,15 +131,12 @@ void take_control(vector<Device*>& devices)
             cout << "Lighting cancelled." << endl;
             return;
         }
-        call_api(selected_device->sockfd, to_string(4) + " " + selected_device->info.token + " " + to_string(duration) + " " + to_string(power));
+        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(duration) + " " + to_string(power));
     }
 }
 
-void set_timer(vector<Device*>& devices)
+void set_timer(Device* selected_device)
 {
-    Device* selected_device = listDeviceToSelect(devices);
-    if (!selected_device)
-        return;
     cout << "Enter state (0 to ON, 1 to OFF, -1 to cancel): ";
     int state;
     cin >> state;
@@ -117,13 +156,10 @@ void set_timer(vector<Device*>& devices)
         cout << "Timer setting cancelled." << endl;
         return;
     }
-    call_api(selected_device->sockfd, to_string(5) + " " + selected_device->info.token + " " + to_string(state) + " " + to_string(minutes));
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " TIMER " + to_string(state) + " " + to_string(minutes));
 }   
 
-void cancel_control(vector<Device*>& devices)
+void cancel_control(Device* selected_device)
 {
-    Device* selected_device = listDeviceToSelect(devices);
-    if (!selected_device)
-        return;
-    call_api(selected_device->sockfd, to_string(6) + " " + selected_device->info.token);
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " CANCEL");
 }
