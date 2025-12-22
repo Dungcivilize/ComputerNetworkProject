@@ -6,6 +6,7 @@ INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver
 COMMON_SRCS := $(wildcard common/*.cpp)
 DEPS_SRCS := $(wildcard dependencies/*.cpp)
 DEPS_OBJS := $(DEPS_SRCS:.cpp=.o)
+COMMON_OBJS := $(COMMON_SRCS:.cpp=.o)
 HANDLER_SRCS := $(wildcard handler/*.cpp)
 
 APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
@@ -34,8 +35,8 @@ app: $(APP_OBJS)
 test_sensor: $(TEST_SENSOR_OBJS) $(DEPS_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor $(TEST_SENSOR_OBJS) $(DEPS_OBJS)
 
-test_sensor_client: $(TEST_SENSOR_CLIENT_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor_client $(TEST_SENSOR_CLIENT_OBJS)
+test_sensor_client: $(TEST_SENSOR_CLIENT_OBJS) $(COMMON_OBJS) $(DEPS_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor_client $(TEST_SENSOR_CLIENT_OBJS) $(COMMON_OBJS) $(DEPS_OBJS)
 
 testEmulatorSensor: $(TEST_EMULATOR_SENSOR_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(TEST_EMULATOR_SENSOR_OBJS)

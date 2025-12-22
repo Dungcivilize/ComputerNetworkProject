@@ -4,7 +4,7 @@
 
 using namespace std;    
 
-std::string handle_response(std::string response);
+void handle_response(std::string response);
 std::string get_status_message(int status_code);
 
 void call_api(int sockfd, string request) {
@@ -20,70 +20,81 @@ void call_api(int sockfd, string request) {
     handle_response(response);
 }
 
-std::string handle_response(std::string response) {
+void handle_response(std::string response) {
     string status_code, power_data, data;
     stringstream ss(response);
     ss >> status_code;
     cout << get_status_message(stoi(status_code)) << endl;
     if (stoi(status_code) % 10 != 0) {
-        return "";
+        return;
     }
-    if (status_code == "310") {
-        ss >> power_data >> data;
-        cout << "Power state changed to " << (data == "1" ? "ON" : "OFF") << endl;
-        cout << "Power consumption: " << power_data << " Watts" << endl;
-    }
-    if (status_code == "320") {
-        ss >> power_data >> data;
-        cout << "Watering amount: " << data << " Liters" << endl;
-        cout << "Power consumption: " << power_data << " Watts" << endl;
-    }
-    else if (status_code == "330") {
-        ss >> power_data;
-        getline(ss, data);
-        cout << "Fertilizing amount: " << endl;
-        stringstream data_ss(data);
-        string item;
-        while (getline(data_ss, item, '|')) {
-            if (!item.empty()) {
-                cout << "-  " << item << endl;
+    // Declare variables outside the switch to avoid bypassing initialization
+    stringstream data_ss;
+    string item;
+
+    switch (stoi(status_code)) {
+        case 200:
+            ss >> data;
+            cout << "Device token: " << data << endl;
+            break;
+        case 310:
+            ss >> power_data >> data;
+            cout << "Power state changed to " << (data == "1" ? "ON" : "OFF") << endl;
+            cout << "Power consumption: " << power_data << " Watts" << endl;
+            break;
+        case 320:
+            ss >> power_data >> data;
+            cout << "Watering amount: " << data << " Liters" << endl;
+            cout << "Power consumption: " << power_data << " Watts" << endl;
+            break;
+        case 330:               
+            ss >> power_data;
+            getline(ss, data);
+            cout << "Fertilizing amount: " << endl;
+            data_ss.clear();
+            data_ss.str(data);
+            while (getline(data_ss, item, '|')) {
+                if (!item.empty()) {
+                    cout << "-  " << item << endl;
+                }
             }
+            cout << "Power consumption: " << power_data << " Watts" << endl;
+            break;
+        case 340:    {
+            int duration = 0, power = 0;
+            ss >> power_data >> duration >> power;
+            cout << "Lighting duration and power set." << endl;
+            cout << "Duration: " << duration << " minutes" << endl;
+            cout << "Power: " << power << " Watts" << endl;
+            cout << "Power consumption: " << power_data << " Watts" << endl;
+            break;
         }
-        cout << "Power consumption: " << power_data << " Watts" << endl;
-    }
-    else if (status_code == "340") {
-        int duration = 0, power = 0;
-        ss >> power_data >> duration >> power;
-        cout << "Lighting duration and power set." << endl;
-        cout << "Duration: " << duration << " minutes" << endl;
-        cout << "Power: " << power << " Watts" << endl;
-        cout << "Power consumption: " << power_data << " Watts" << endl;
-    }
-    else if (status_code == "350") {
-        ss >> power_data >> data;
-        // Tính thời điểm thực hiện hành động
-        time_t current_time = time(nullptr);
-        int minutes = stoi(data);
-        time_t action_time = current_time + minutes * 60;
-        char time_str[100];
-        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", localtime(&action_time));
-        cout << "Action scheduled at: " << time_str << endl;
-        cout << "Power consumption: (expected) " << power_data << " Watts" << endl;
-    }
-    else if (status_code == "500") {
-        cout << "Device Data:" << endl;
-        stringstream data_ss(data);
-        string item;
-        while (getline(data_ss, item, ';')) {
-            if (!item.empty()) {
-                cout << "- " << item << endl;
+        case 350: {
+            ss >> power_data >> data;
+            // Tính thời điểm thực hiện hành động
+            time_t current_time = time(nullptr);
+            int minutes = stoi(data);
+            time_t action_time = current_time + minutes * 60;
+            char time_str[100];
+            strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", localtime(&action_time));
+            cout << "Action scheduled at: " << time_str << endl;
+            cout << "Power consumption: (expected) " << power_data << " Watts" << endl;
+            break;
+        }
+        case 500:
+            cout << "Device Data:" << endl;
+            data_ss.clear();
+            data_ss.str(data);
+            while (getline(data_ss, item, ';')) {
+                if (!item.empty()) {
+                    cout << "- " << item << endl;
+                }
             }
-        }
+            break;
+        default:
+            cout << "Unhandled action response." << endl;
+            break;
     }
-    else {
-        cout << "Unhandled action response." << endl;
-    }
-    return "";
 }
 
 string get_status_message(int status_code) {
@@ -110,6 +121,12 @@ string get_status_message(int status_code) {
             return "Invalid command format.";
         case 4:
             return "Unknown command.";
+        case 200:
+            return "Connect to device successful.";
+        case 201:
+            return "Device is already connected.";
+        case 202:
+            return "Wrong password.";
         case 300:
             return "Device control successful.";
         case 301:
