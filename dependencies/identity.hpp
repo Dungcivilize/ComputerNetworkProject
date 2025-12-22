@@ -1,3 +1,6 @@
+#ifndef DEPENDENCIES_IDENTITY_HPP
+#define DEPENDENCIES_IDENTITY_HPP
+
 #include "framework.hpp"
 
 struct Identity
@@ -10,7 +13,10 @@ struct Identity
     ~Identity() { close(sockfd); }
 };
 
-Identity* create_identity(uint16_t port, int type, int level, int optname, in_addr_t inaddr)
+// Mark as inline because this header defines the function body; making it inline
+// avoids multiple-definition linker errors when the header is included in
+// multiple translation units.
+inline Identity* create_identity(uint16_t port, int type, int level, int optname, in_addr_t inaddr)
 {
     int fd = socket(AF_INET, type, 0);
     if (fd < 0)
@@ -42,3 +48,5 @@ Identity* create_identity(uint16_t port, int type, int level, int optname, in_ad
 
     return new Identity(fd, addr);
 }
+
+#endif // DEPENDENCIES_IDENTITY_HPP
