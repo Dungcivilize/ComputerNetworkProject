@@ -49,9 +49,4 @@ testEmulator: $(TEST_EMULATOR_OBJS)
 
 clean:
 	rm -f *.o */*.o common/*.o dependencies/*.o handler/*.o sensorserver/*.o tests/*.o
-	[ -f app ] && rm -f app
-	[ -f sensor ] && rm -f sensor
-	[ -f tests/test_sensor ] && rm -f tests/test_sensor
-	[ -f tests/test_sensor_client ] && rm -f tests/test_sensor_client
-	[ -f testEmulatorSensor ] && rm -f testEmulatorSensor
-	[ -f testEmulator ] && rm -f testEmulator
+	rm -f app sensor tests/test_sensor tests/test_sensor_client testEmulatorSensor testEmulator
