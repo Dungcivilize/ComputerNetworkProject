@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
             cout << "Found sensor at " << ip << ": " << resp << endl;
         }
         close(s);
+        cout << "----------------------------" << endl;
     }
 
     // Attempt CONNECT to first reachable sensor
