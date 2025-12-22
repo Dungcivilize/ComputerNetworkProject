@@ -15,6 +15,7 @@
 #include <vector>
 #include <cstdlib>
 #include <fcntl.h>
+#include "../common/index.hpp"
 
 using namespace std;
 
@@ -51,6 +52,7 @@ int connect_to(const string &ip, uint16_t port, int timeout_ms = 200)
         fd_set wfds;
         FD_ZERO(&wfds);
         FD_SET(sock, &wfds);
+        struct timeval tv;
         tv.tv_sec = timeout_ms / 1000;
         tv.tv_usec = (timeout_ms % 1000) * 1000;
 
@@ -156,7 +158,7 @@ int main(int argc, char* argv[])
     for (int i = 1; i <= 254; ++i) {
         if (i == mylast) continue;
         string ip = base + "." + to_string(i);
-        int s = connect_to(ip, port, 20);
+        int s = connect_to(ip, port, 1);
         if (s < 0) continue;
         // Send scan command '1'
         send_line(s, "1");
@@ -175,19 +177,11 @@ int main(int argc, char* argv[])
         cout << "No reachable sensors found." << endl;
         return 1;
     }
-    string connect_resp;
-    send_line(s, "2 1 password_3");
-    connect_resp = recv_line(s);
-    cout << "CONNECT response: " << connect_resp << endl;
+    call_api(s, "2 1 password_wrong");
     
-    send_line(s, "2 1 password_1");
-    connect_resp = recv_line(s);
-    cout << "CONNECT response: " << connect_resp << endl;
+    call_api(s, "2 1 password_1");
 
-    send_line(s, "2 1 password_2");
-    connect_resp = recv_line(s);
-    cout << "CONNECT response: " << connect_resp << endl;
-    
+    call_api(s, "2 1 password_1");    
     // Đóng kết nối
     for (int cs : connected_sensors) {
         close(cs);

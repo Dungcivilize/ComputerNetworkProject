@@ -16,56 +16,7 @@ int main(int argc, char** argv)
     vector<Device*> devices;
     while (1)
     {
-        fd_set rfds;
-        FD_ZERO(&rfds);
-
-        FD_SET(STDIN_FILENO, &rfds);
-        int maxfd = STDIN_FILENO;
-
-        for (auto* device : devices)
-        {
-            FD_SET(device->sockfd, &rfds);
-            if (device->sockfd > maxfd)
-                maxfd = device->sockfd;
-        }
-
-        int ready = select(maxfd + 1, &rfds, NULL, NULL, NULL);
-        if (ready < 0)
-        {
-            if (errno == EINTR) continue;
-            perror("select");
-            break;
-        }
-
-        if (FD_ISSET(STDIN_FILENO, &rfds))
-        {
-            handleCommand(devices, port);
-        }
-        for (size_t idx = 0; idx < devices.size();)
-        {
-            Device* dev = devices[idx];
-
-            if (FD_ISSET(dev->sockfd, &rfds))
-            {
-                string buf;
-                ssize_t n = recv_message(dev->sockfd, buf);
-                if (n <= 0)
-                {
-                    if (n < 0)
-                        perror("recv_message");
-                    cout << "Device " << dev->info.id << " disconnected.";
-
-                    delete dev;
-                    devices.erase(devices.begin() + idx);
-                    continue;
-                }
-                else
-                {
-                    cout << buf << endl;
-                }
-            }
-            idx++;
-        }
+        handleCommand(devices, port);
     }
 
     for (auto* dev : devices)

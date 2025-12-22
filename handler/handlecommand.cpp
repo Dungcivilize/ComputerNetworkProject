@@ -14,7 +14,7 @@
 void handleCommand(std::vector<Device*>& devices, uint16_t port) {
     Device* selected_device = nullptr;
     std::vector<DeviceInfo> device_list;
-    
+    system("clear");
     cout << "===============================" << endl;
     cout << "Available commands:" << endl;
     cout << " 1. SCAN <duration>               - Scan for devices for <duration> seconds" << endl;
