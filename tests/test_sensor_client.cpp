@@ -12,6 +12,8 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <vector>
+#include <cstdlib>
 
 using namespace std;
 
