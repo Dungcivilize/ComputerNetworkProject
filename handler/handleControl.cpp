@@ -1,55 +1,5 @@
 #include "../common/index.hpp"
 
-void handleControl(std::vector<Device*>& devices)
-{
-    Device* selected_device = listDeviceToSelect(devices);
-    if (!selected_device)
-        return;
-    if (selected_device->info.token.empty()) {
-        cout << " Device not connected properly." << endl;
-        return;
-    }
-    cout << "Available control options:" << endl;
-    cout << "1. Power Control" << endl;
-    switch (selected_device->info.type) {
-        case SPRINKLER:
-            cout << "2. Watering Control" << endl;
-            break;
-        case FERTILIZER:
-            cout << "2. Fertilizing Control" << endl;
-            break;
-        case LIGHTING:
-            cout << "2. Lighting Control" << endl;
-            break;
-        default:
-            cout << " Unknown device type." << endl;
-            return;
-    }
-    cout << "3. Set Timer" << endl;
-    cout << "4. Cancel Control" << endl;
-    cout << "Select an option (1-4): ";
-    int option;
-    cin >> option;
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-    switch (option) {
-        case 1:
-            power_control(selected_device);
-            break;
-        case 2:
-            take_control(selected_device);
-            break;
-        case 3:
-            set_timer(selected_device);
-            break;
-        case 4:
-            cancel_control(selected_device);
-            break;
-        default:
-            cout << " Invalid option selected." << endl;
-            break;
-    }
-}
 void power_control(Device* selected_device)
 {
     cout << "Enter power state (0 for ON, 1 for OFF): ";
@@ -162,4 +112,55 @@ void set_timer(Device* selected_device)
 void cancel_control(Device* selected_device)
 {
     call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " CANCEL");
+}
+
+void handleControl(std::vector<Device*>& devices)
+{
+    Device* selected_device = listDeviceToSelect(devices);
+    if (!selected_device)
+        return;
+    if (selected_device->info.token.empty()) {
+        cout << " Device not connected properly." << endl;
+        return;
+    }
+    cout << "Available control options:" << endl;
+    cout << "1. Power Control" << endl;
+    switch (selected_device->info.type) {
+        case SPRINKLER:
+            cout << "2. Watering Control" << endl;
+            break;
+        case FERTILIZER:
+            cout << "2. Fertilizing Control" << endl;
+            break;
+        case LIGHTING:
+            cout << "2. Lighting Control" << endl;
+            break;
+        default:
+            cout << " Unknown device type." << endl;
+            return;
+    }
+    cout << "3. Set Timer" << endl;
+    cout << "4. Cancel Control" << endl;
+    cout << "Select an option (1-4): ";
+    int option;
+    cin >> option;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    switch (option) {
+        case 1:
+            power_control(selected_device);
+            break;
+        case 2:
+            take_control(selected_device);
+            break;
+        case 3:
+            set_timer(selected_device);
+            break;
+        case 4:
+            cancel_control(selected_device);
+            break;
+        default:
+            cout << " Invalid option selected." << endl;
+            break;
+    }
 }
