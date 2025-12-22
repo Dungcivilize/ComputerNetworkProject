@@ -2,7 +2,6 @@
 #define SENSORSERVER_SENSOR_HPP
 
 #include "../dependencies/index.hpp"
-#include "../dependencies/identity.hpp"
 
 #include <random>
 #include <sstream>
@@ -57,17 +56,6 @@ public:
         if (tcpid) delete tcpid;
     }
 
-    vector<double> nutrient_evaluate()
-    {
-        vector<double> stats;
-        random_device rd;
-        mt19937 rng(rd());
-        uniform_real_distribution<> dist(0, 1);
-        for (int count = 0; count < 3; count++)
-            stats.push_back(dist(rng));
-        return stats;
-    }
-
     struct ClientInfo {
         Sensor* self;
         int clientfd;
@@ -110,7 +98,7 @@ public:
                 }
                 if (info->app_id == app_id_parsed)
                 {
-                    response = "2 201";
+                    response = "201";
                     send_message(clientfd, response);
                     continue;
                 }
@@ -120,12 +108,12 @@ public:
                     info->app_id = app_id_parsed;
                     // generate token now and return in format: 2 200 <token>
                     token = generate_token();   
-                    response = "2 200 " + token;
+                    response = "200 " + token;
                     send_message(clientfd, response);
                 }
                 else
                 {
-                    response = "2 202";
+                    response = "202";
                     send_message(clientfd, response);
                 }
             } else if (cmd == "4") {

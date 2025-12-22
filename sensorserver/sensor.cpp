@@ -53,17 +53,6 @@ public:
         if (tcpid) delete tcpid;
     }
 
-    vector<double> nutrient_evaluate()
-    {
-        vector<double> stats;
-        random_device rd;
-        mt19937 rng(rd());
-        uniform_real_distribution<> dist(0, 1);
-        for (int count = 0; count < 3; count++)
-            stats.push_back(dist(rng));
-        return stats;
-    }
-
     struct ClientInfo {
         Sensor* self;
         int clientfd;

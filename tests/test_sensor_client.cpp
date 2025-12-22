@@ -80,7 +80,7 @@ int connect_to(const string &ip, uint16_t port, int timeout_ms = 200)
     // set small recv/send timeouts so later IO won't hang long
     struct timeval tv2;
     tv2.tv_sec = 0;
-    tv2.tv_usec = 300 * 1000; // 300ms
+    tv2.tv_usec = 300 * 1000; // 300 ms
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv2, sizeof tv2);
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv2, sizeof tv2);
     return sock;
@@ -154,11 +154,10 @@ int main(int argc, char* argv[])
     int mylast = atoi(parts[3].c_str());
 
     cout << "Local IP detected: " << local_ip << " — scanning " << base << ".1-254 on port " << port << " (skipping " << mylast << ")" << endl;
-
     for (int i = 1; i <= 254; ++i) {
         if (i == mylast) continue;
         string ip = base + "." + to_string(i);
-        int s = connect_to(ip, port);
+        int s = connect_to(ip, port, 20);
         if (s < 0) continue;
         // Send scan command '1'
         send_line(s, "1");
