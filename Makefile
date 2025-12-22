@@ -1,6 +1,6 @@
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -pthread
-INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensor
+INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver
 
 # Gather sources from the current project layout
 COMMON_SRCS := $(wildcard common/*.cpp)
@@ -8,7 +8,7 @@ DEPS_SRCS := $(wildcard dependencies/*.cpp)
 HANDLER_SRCS := $(wildcard handler/*.cpp)
 
 APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
-SENSOR_SRCS := sensor/sensor.cpp $(DEPS_SRCS)
+SENSOR_SRCS := sensorserver/sensor.cpp $(DEPS_SRCS)
 TEST_SENSOR_SRCS := tests/test_sensor.cpp
 TEST_SENSOR_CLIENT_SRCS := tests/test_sensor_client.cpp
 TEST_EMULATOR_SENSOR_SRCS := tests/testEmulatorSensor.cpp
@@ -48,10 +48,4 @@ testEmulator: $(TEST_EMULATOR_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -f *.o */*.o common/*.o dependencies/*.o handler/*.o sensor/*.o tests/*.o
-	[ -f app ] && rm -f app
-	[ -f sensor ] && rm -f sensor
-	[ -f tests/test_sensor ] && rm -f tests/test_sensor
-	[ -f tests/test_sensor_client ] && rm -f tests/test_sensor_client
-	[ -f testEmulatorSensor ] && rm -f testEmulatorSensor
-	[ -f testEmulator ] && rm -f testEmulator
+	rm -f *.o */*.o common/*.o dependencies/*.o handler/*.o sensor/*.o tests/*.o app sensor tests/test_sensor tests/test_sensor_client tests/testEmulatorSensor tests/testEmulator

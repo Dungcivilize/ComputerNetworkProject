@@ -64,10 +64,6 @@ public:
         return stats;
     }
 
-    // connection_check removed: replaced by accept/handle loop inside run()
-
-    // removed global connection state; per-client authentication handled in client threads
-
     struct ClientInfo {
         Sensor* self;
         int clientfd;
@@ -88,6 +84,7 @@ public:
         string buf, cmd;
         string response;
         string token, inp_token;
+        bool authenticated = false;
         while (1)
         {
             ssize_t m = recv_message(clientfd, buf);
@@ -95,101 +92,96 @@ public:
 
             stringstream ss(buf);
             ss >> cmd;
-            switch (cmd) {
-                case "1":
-                    response = "100 " + ID + " " + name + " " + TYPE;
+            if (cmd == "1") {
+                response = "100 " + ID + " " + name + " " + TYPE;
+                send_message(clientfd, response);
+            } else if (cmd == "2") {
+                int app_id_parsed;
+                string inp_pass;
+                if (!(ss >> app_id_parsed >> inp_pass))
+                {
+                    response = "3";
                     send_message(clientfd, response);
-                    break;
-                case "2":
-                    int app_id_parsed;
-                    string inp_pass;
-                    if (!(ss >> app_id_parsed >> inp_pass))
-                    {
-                        response = "3";
-                        send_message(clientfd, response);
-                        continue;
-                    }
-                    if (info->app_id == app_id_parsed)
-                    {
-                        response = "201";
-                        send_message(clientfd, response);
-                        continue;
-                    }
-                    if (inp_pass == pass)
-                    {
-                        authenticated = true;
-                        info->app_id = app_id_parsed;
-                        // generate token now and return in format: 2 200 <token>
-                        token = generate_token();   
-                        response = "200 " + token;
-                        send_message(clientfd, response);
-                    }
-                    else
-                    {
-                        response = "202";
-                        send_message(clientfd, response);
-                    }
-                    break;  
-                case "4":
-                    string old_pass, new_pass;
-                    if (!ss >> inp_token >> old_pass >> new_pass)
-                    {
-                        response = "3";
-                        send_message(clientfd, response);
-                        continue;
-                    }
-                    if (inp_token != token)
-                    {
-                        response = "2";
-                        send_message(clientfd, response);
-                        continue;
-                    }
-                    if (old_pass != pass)
-                    {
-                        response = "401";
-                        send_message(clientfd, response);
-                    }
-                    else
-                    {
-                        if (new_pass == pass)
-                        {
-                            response = "402";
-                            send_message(clientfd, response);
-                            continue;
-                        }
-                        pass = new_pass;
-                        response = "400";
-                        send_message(clientfd, response);
-                    }
-                    break;
-                case "CONFIG":
-                    if (!authenticated)
-                    {
-                        string msg = to_string(ERROR_UNKNOWN_COMMAND) + " Not connected";
-                        send_message(clientfd, msg);
-                        continue;
-                    }
-                    string param;
-                    float value;
-                    ss >> param >> value;
-                    if (param != "T")
-                    {
-                        string msg = to_string(ERROR_INVALID_PARAM) + " No such param for sensor";
-                        send_message(clientfd, msg);
-                    }
-                    else
-                    {
-                        T = value;
-                        cout << "T has been set to: " << T << endl;
-                        string msg = to_string(SUCCESS_PARAM_CHANGE) + " Sensor T value configured";
-                        send_message(clientfd, msg);
-                    }
-                    break;
-                default:
-                    response = "4";
+                    continue;
+                }
+                if (info->app_id == app_id_parsed)
+                {
+                    response = "2 201";
                     send_message(clientfd, response);
-                    break;
+                    continue;
+                }
+                if (inp_pass == pass)
+                {
+                    authenticated = true;
+                    info->app_id = app_id_parsed;
+                    // generate token now and return in format: 2 200 <token>
+                    token = generate_token();   
+                    response = "2 200 " + token;
+                    send_message(clientfd, response);
+                }
+                else
+                {
+                    response = "2 202";
+                    send_message(clientfd, response);
+                }
+            } else if (cmd == "4") {
+                string old_pass, new_pass;
+                if (!ss >> inp_token >> old_pass >> new_pass)
+                {
+                    response = "3";
+                    send_message(clientfd, response);
+                    continue;
+                }
+                if (inp_token != token)
+                {
+                    response = "2";
+                    send_message(clientfd, response);
+                    continue;
+                }
+                if (old_pass != pass)
+                {
+                    response = "401";
+                    send_message(clientfd, response);
+                }
+                else
+                {
+                    if (new_pass == pass)
+                    {
+                        response = "402";
+                        send_message(clientfd, response);
+                        continue;
+                    }
+                    pass = new_pass;
+                    response = "400";
+                    send_message(clientfd, response);
+                }
+            } else if (cmd == "CONFIG") {
+                if (!authenticated)
+                {
+                    string msg = to_string(ERROR_UNKNOWN_COMMAND) + " Not connected";
+                    send_message(clientfd, msg);
+                    continue;
+                }
+                string param;
+                float value;
+                ss >> param >> value;
+                if (param != "T")
+                {
+                    string msg = to_string(ERROR_INVALID_PARAM) + " No such param for sensor";
+                    send_message(clientfd, msg);
+                }
+                else
+                {
+                    T = value;
+                    cout << "T has been set to: " << T << endl;
+                    string msg = to_string(SUCCESS_PARAM_CHANGE) + " Sensor T value configured";
+                    send_message(clientfd, msg);
+                }
+            } else {
+                response = "4";
+                send_message(clientfd, response);
             }
+        }
         close(info->clientfd);
         delete info;
     }
