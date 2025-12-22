@@ -141,6 +141,8 @@ int main(int argc, char* argv[])
     }
     // extract base (first 3 octets) and last octet
     vector<string> parts;
+    vector<int> connected_sensors;
+
     stringstream sp(local_ip);
     string item;
     while (getline(sp, item, '.')) parts.push_back(item);
@@ -164,22 +166,33 @@ int main(int argc, char* argv[])
         if (!resp.empty()) {
             cout << "Found sensor at " << ip << ": " << resp << endl;
         }
-        close(s);
+        connected_sensors.push_back(s);
         cout << "----------------------------" << endl;
     }
 
     // Attempt CONNECT to first reachable sensor
     cout << "\nAttempting CONNECT to first reachable sensor..." << endl;
-    for (int i = 1; i <= 254; ++i) {
-        if (i == mylast) continue;
-        string ip = base + "." + to_string(i);
-        int s = connect_to(ip, port);
-        if (s < 0) continue;
-        send_line(s, "2 1 password");
-        string resp = recv_line(s);
-        cout << ip << " -> " << resp << endl;
-        close(s);
-        break;
+    int s = connected_sensors.empty() ? -1 : connected_sensors[0];
+    if (s < 0) {
+        cout << "No reachable sensors found." << endl;
+        return 1;
+    }
+    string connect_resp;
+    send_line(s, "2 1 password_3");
+    connect_resp = recv_line(s);
+    cout << "CONNECT response: " << connect_resp << endl;
+    
+    send_line(s, "2 1 password_1");
+    connect_resp = recv_line(s);
+    cout << "CONNECT response: " << connect_resp << endl;
+
+    send_line(s, "2 1 password_2");
+    connect_resp = recv_line(s);
+    cout << "CONNECT response: " << connect_resp << endl;
+    
+    // Đóng kết nối
+    for (int cs : connected_sensors) {
+        close(cs);
     }
 
     return 0;

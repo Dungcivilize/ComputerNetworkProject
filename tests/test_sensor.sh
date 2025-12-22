@@ -39,11 +39,10 @@ for i in $(seq 1 $COUNT); do
     ip link set veth-test${i}-br master $BRIDGE
     ip link set veth-test${i}-br up
 
-    sensor_port=$((PORT + i - 1))
     if [ "$BACKGROUND" == "true" ]; then
-        ip netns exec $ns ./test_sensor $sensor_port sensor_${i} name_${i} password_${i} &
+        ip netns exec $ns ./test_sensor $PORT sensor_${i} name_${i} password_${i} &
     else
-        gnome-terminal --title="TestSensor ns${i}testsensor ($ipaddr:$sensor_port)" -- bash -c "ip netns exec $ns ./test_sensor $sensor_port sensor_${i} name_${i} password_${i}; exec bash"
+        gnome-terminal --title="TestSensor ns${i}testsensor ($ipaddr:$PORT)" -- bash -c "ip netns exec $ns ./test_sensor $PORT sensor_${i} name_${i} password_${i}; exec bash"
     fi
 done
 
