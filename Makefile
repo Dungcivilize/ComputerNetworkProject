@@ -8,7 +8,7 @@ DEPS_SRCS := $(wildcard dependencies/*.cpp)
 HANDLER_SRCS := $(wildcard handler/*.cpp)
 
 APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
-SENSOR_SRCS := sensorserver/sensor.cpp $(DEPS_SRCS)
+SENSOR_SRCS := $(DEPS_SRCS)
 TEST_SENSOR_SRCS := tests/test_sensor.cpp
 TEST_SENSOR_CLIENT_SRCS := tests/test_sensor_client.cpp
 TEST_EMULATOR_SENSOR_SRCS := tests/testEmulatorSensor.cpp
@@ -21,15 +21,14 @@ TEST_SENSOR_CLIENT_OBJS := $(TEST_SENSOR_CLIENT_SRCS:.cpp=.o)
 TEST_EMULATOR_SENSOR_OBJS := $(TEST_EMULATOR_SENSOR_SRCS:.cpp=.o)
 TEST_EMULATOR_OBJS := $(TEST_EMULATOR_SRCS:.cpp=.o)
 
-all: app sensor test_sensor test_sensor_client testEmulatorSensor testEmulator
+all: app test_sensor test_sensor_client testEmulatorSensor testEmulator
 
 .PHONY: all clean
 
 app: $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(APP_OBJS)
 
-sensor: $(SENSOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(SENSOR_OBJS)
+# `sensor` is a header-only class now; build test binaries that use it instead.
 
 test_sensor: $(TEST_SENSOR_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor $(TEST_SENSOR_OBJS)

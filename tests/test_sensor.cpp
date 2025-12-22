@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
 
-// Include sensor implementation directly for the test binary
-#include "../sensorserver/sensor.cpp"
+// Include sensor class header for the test binary
+#include "../sensorserver/sensor.hpp"
 
 int main(int argc, char* argv[])
 {
