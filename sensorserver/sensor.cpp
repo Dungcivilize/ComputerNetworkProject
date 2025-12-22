@@ -126,7 +126,7 @@ public:
                 }
             } else if (cmd == "4") {
                 string old_pass, new_pass;
-                if (!ss >> inp_token >> old_pass >> new_pass)
+                if (!(ss >> inp_token >> old_pass >> new_pass))
                 {
                     response = "3";
                     send_message(clientfd, response);

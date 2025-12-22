@@ -2,7 +2,7 @@
 #include <string>
 
 // Include sensor implementation directly for the test binary
-#include "../sensor/sensor.cpp"
+#include "../sensorserver/sensor.cpp"
 
 int main(int argc, char* argv[])
 {
