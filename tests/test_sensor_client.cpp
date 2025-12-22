@@ -18,12 +18,15 @@
 
 using namespace std;
 
-// Non-blocking connect with timeout (ms). Returns socket fd or -1.
-int connect_to(const string &ip, uint16_t port, int timeout_ms = 20)
+int connect_to(const string &ip, uint16_t port)
 {
+    // Tạo socket TCP
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return -1;
+
+    // Cấu hình địa chỉ server
     struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     if (inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) <= 0) {
@@ -31,38 +34,13 @@ int connect_to(const string &ip, uint16_t port, int timeout_ms = 20)
         return -1;
     }
 
-    int flags = fcntl(sock, F_GETFL, 0);
-    if (flags == -1) flags = 0;
-    if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) == -1) {
+    // Thử kết nối (blocking, không timeout phức tạp)
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         close(sock);
         return -1;
     }
 
-    int res = connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-    if (res == 0) {
-        fcntl(sock, F_SETFL, flags);
-    } else if (errno == EINPROGRESS) {
-        fd_set wfds;
-        FD_ZERO(&wfds);
-        FD_SET(sock, &wfds);
-        struct timeval tv;
-        tv.tv_sec = timeout_ms / 1000;
-        tv.tv_usec = (timeout_ms % 1000) * 1000;
-        int sel = select(sock + 1, NULL, &wfds, NULL, &tv);
-        if (sel <= 0) { close(sock); return -1; }
-        int so_error = 0; socklen_t len = sizeof(so_error);
-        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len) < 0) { close(sock); return -1; }
-        if (so_error != 0) { close(sock); return -1; }
-        fcntl(sock, F_SETFL, flags);
-    } else {
-        close(sock); return -1;
-    }
-
-    // small recv/send timeouts
-    struct timeval tv2; tv2.tv_sec = 0; tv2.tv_usec = timeout_ms * 1000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv2, sizeof tv2);
-    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv2, sizeof tv2);
-    return sock;
+    return sock; // thành công, trả về socket fd
 }
 
 bool send_line(int sock, const string &msg)
