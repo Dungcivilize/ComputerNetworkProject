@@ -4,10 +4,10 @@
 
 using namespace std;    
 
-void handle_response(std::string response, void* output = nullptr);
+void handle_response(std::string response, void* output);
 std::string get_status_message(int status_code);
 
-void call_api(int sockfd, string request, void* output = nullptr) {
+void call_api(int sockfd, string request, void* output) {
     std::string response;
     if (send_message(sockfd, request) <= 0) {
         cout << "Failed to send message to device." << endl;
@@ -20,7 +20,7 @@ void call_api(int sockfd, string request, void* output = nullptr) {
     handle_response(response, output);
 }
 
-void handle_response(std::string response, void* output = nullptr) {
+void handle_response(std::string response, void* output) {
     string status_code, power_data, data;
     stringstream ss(response);
     ss >> status_code;
