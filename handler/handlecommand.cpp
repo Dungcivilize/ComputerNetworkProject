@@ -36,7 +36,7 @@ void handleCommand(std::vector<Device*>& devices, uint16_t port) {
     }
     else if (cmd == "2")
     {
-
+        handleConnect(devices);
     }
     else if (cmd == "3")
     {

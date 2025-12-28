@@ -1,53 +1,51 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -pthread
-INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver
+CXXFLAGS := -std=c++17 -Wall -Wextra -pthread
+INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver -Itests
 
-# Gather sources from the current project layout
+# Source groups
 COMMON_SRCS := $(wildcard common/*.cpp)
 DEPS_SRCS := $(wildcard dependencies/*.cpp)
-DEPS_OBJS := $(DEPS_SRCS:.cpp=.o)
-COMMON_OBJS := $(COMMON_SRCS:.cpp=.o)
 HANDLER_SRCS := $(wildcard handler/*.cpp)
+ROOT_SRCS := app.cpp sensor.cpp
 
+# Test sources
+TEST_SRCS := tests/test_sensor.cpp tests/test_sensor_client.cpp tests/testEmulatorSensor.cpp tests/testEmulator.cpp
+
+# Targets
 APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
-SENSOR_SRCS := $(DEPS_SRCS)
-TEST_SENSOR_SRCS := tests/test_sensor.cpp
-TEST_SENSOR_CLIENT_SRCS := tests/test_sensor_client.cpp
-TEST_EMULATOR_SENSOR_SRCS := tests/testEmulatorSensor.cpp
-TEST_EMULATOR_SRCS := tests/testEmulator.cpp
+SENSOR_SRCS := sensor.cpp $(COMMON_SRCS) $(DEPS_SRCS)
 
 APP_OBJS := $(APP_SRCS:.cpp=.o)
 SENSOR_OBJS := $(SENSOR_SRCS:.cpp=.o)
-TEST_SENSOR_OBJS := $(TEST_SENSOR_SRCS:.cpp=.o)
-TEST_SENSOR_CLIENT_OBJS := $(TEST_SENSOR_CLIENT_SRCS:.cpp=.o)
-TEST_EMULATOR_SENSOR_OBJS := $(TEST_EMULATOR_SENSOR_SRCS:.cpp=.o)
-TEST_EMULATOR_OBJS := $(TEST_EMULATOR_SRCS:.cpp=.o)
 
-all: app test_sensor test_sensor_client testEmulatorSensor testEmulator
+TEST_BINARIES := tests/test_sensor tests/test_sensor_client tests/testEmulatorSensor tests/testEmulator
+
+all: app sensor $(TEST_BINARIES)
 
 .PHONY: all clean
 
 app: $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(APP_OBJS)
 
-# `sensor` is a header-only class now; build test binaries that use it instead.
+sensor: $(SENSOR_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(SENSOR_OBJS)
 
-test_sensor: $(TEST_SENSOR_OBJS) $(DEPS_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor $(TEST_SENSOR_OBJS) $(DEPS_OBJS)
+tests/test_sensor: tests/test_sensor.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-test_sensor_client: $(TEST_SENSOR_CLIENT_OBJS) $(COMMON_OBJS) $(DEPS_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o tests/test_sensor_client $(TEST_SENSOR_CLIENT_OBJS) $(COMMON_OBJS) $(DEPS_OBJS)
+tests/test_sensor_client: tests/test_sensor_client.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-testEmulatorSensor: $(TEST_EMULATOR_SENSOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(TEST_EMULATOR_SENSOR_OBJS)
+tests/testEmulatorSensor: tests/testEmulatorSensor.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-testEmulator: $(TEST_EMULATOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(TEST_EMULATOR_OBJS)
+tests/testEmulator: tests/testEmulator.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-# Generic rule for compiling .cpp to .o
+# Pattern rule for compiling sources
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -f *.o */*.o common/*.o dependencies/*.o handler/*.o sensorserver/*.o tests/*.o
-	rm -f app sensor tests/test_sensor tests/test_sensor_client testEmulatorSensor testEmulator
+	rm -f $(APP_OBJS) $(SENSOR_OBJS) */*.o common/*.o dependencies/*.o handler/*.o sensorserver/*.o tests/*.o
+	rm -f app sensor $(TEST_BINARIES)
