@@ -19,7 +19,7 @@
 
 using namespace std;
 
-int connect_to(const string &ip, uint16_t port, int timeout_ms = 200)
+int connect_to(const string &ip, uint16_t port, int timeout_ms)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return -1;
