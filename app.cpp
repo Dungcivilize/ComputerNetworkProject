@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     vector<Device*> devices;
     while (1)
     {
-        handleCommand(devices, port);
+        handleCommand(devices, port, app_id);
     }
 
     for (auto* dev : devices)

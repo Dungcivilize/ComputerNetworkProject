@@ -11,7 +11,7 @@
 #include <sstream>
 
 // Hàm xử lý lệnh nhập vào, tách từng lệnh và gọi module tương ứng
-void handleCommand(std::vector<Device*>& devices, uint16_t port) {
+void handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
     Device* selected_device = nullptr;
     system("clear");
     cout << "===============================" << endl;
@@ -36,7 +36,7 @@ void handleCommand(std::vector<Device*>& devices, uint16_t port) {
     }
     else if (cmd == "2")
     {
-        handleConnect(devices);
+        handleConnect(devices, app_id);
     }
     else if (cmd == "3")
     {
