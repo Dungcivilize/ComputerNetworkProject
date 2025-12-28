@@ -14,6 +14,7 @@ typedef struct
 {
     std::string id;
     std::string name;
+    std::string addr_str;
     std::string token;
     enum DeviceType type;
 } DeviceInfo;
@@ -23,9 +24,9 @@ typedef struct Device
     DeviceInfo info;
     int sockfd;
 
-    Device(int ip, string info_str)
+    Device(std::string ip, int port, int sockfd, const std::string& info_str)
     {
-        sockfd = ip;
+        this->sockfd = sockfd;
         stringstream ss(info_str);
         string return_code;
         ss >> return_code;
@@ -41,6 +42,8 @@ typedef struct Device
             info.type = FERTILIZER;
         else if (type == "LIGHTING")
             info.type = LIGHTING;
+        // Tạo địa chỉ thiết bị
+        info.addr_str = ip + ":" + std::to_string(port);
     }
 
     ~Device() { close(sockfd); }
