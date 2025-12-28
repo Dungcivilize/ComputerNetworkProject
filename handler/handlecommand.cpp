@@ -13,11 +13,10 @@
 // Hàm xử lý lệnh nhập vào, tách từng lệnh và gọi module tương ứng
 void handleCommand(std::vector<Device*>& devices, uint16_t port) {
     Device* selected_device = nullptr;
-    std::vector<DeviceInfo> device_list;
     system("clear");
     cout << "===============================" << endl;
     cout << "Available commands:" << endl;
-    cout << " 1. SCAN <duration>               - Scan for devices for <duration> seconds" << endl;
+    cout << " 1. SCAN                        - Scan for devices" << endl;
     cout << " 2. CONNECT <id> <password>       - Connect to device with <id> using <password>" << endl;
     cout << " 3. CONTROL DEVICE                 - Take control of a device" << endl;
     cout << " 4. CHANGE_PW <id> <current_pw> <new_pw> - Change password for device with <id>" << endl;
@@ -33,23 +32,11 @@ void handleCommand(std::vector<Device*>& devices, uint16_t port) {
     
     if (cmd == "1")
     {
-        float duration;
-        cin >> duration;
-        device_list = broadcast(port, duration);
+        devices = scan_devices(port);
     }
     else if (cmd == "2")
     {
-        string id;
-        string pass;
-        cin >> id >> pass;
-        ssize_t idx = find_device_info_by_id(device_list, id);
-        if (idx < 0)
-            cout << to_string(ERROR_UNKNOWN_TOKEN) << " No such id exist" << endl;
-        else
-        {
-            Device* new_device = establish_connection(device_list[idx], pass);
-            if (new_device) devices.push_back(new_device);
-        }                   
+
     }
     else if (cmd == "3")
     {

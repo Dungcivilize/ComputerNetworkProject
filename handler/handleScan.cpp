@@ -1,65 +1,65 @@
 #include "../common/index.hpp"
 #include "handleScan.hpp"
 
-vector<DeviceInfo> broadcast(uint16_t port, float duration)
+bool get_local_ipv4(string &out_ip)
 {
-    vector<DeviceInfo> devices;
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    int opt = 1;
-    if (setsockopt(sockfd,SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)) < 0)
-    {
-        perror("broadcast.setsockopt");
-        return devices;
-    }
-    
-    struct sockaddr_in baddr;
-    baddr.sin_family = AF_INET;
-    baddr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-    baddr.sin_port = htons(port);
-
-    ssize_t sent = sendto(sockfd, BROADCAST_MESSAGE, strlen(BROADCAST_MESSAGE), 0, (struct sockaddr*)&baddr, sizeof(baddr));
-    if (sent < 0)
-    {
-        perror("broadcast.sendto");
-        return devices;
-    }
-
-    struct timeval tv;
-    tv.tv_sec = duration;
-    tv.tv_usec = 0;
-
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
-        perror("broadcast.setsockopt");
-
-    while (1)
-    {
-        char buf[BUFFER_SIZE];
-        struct sockaddr_in source;
-        socklen_t source_len = sizeof(source);
-
-        ssize_t n = recvfrom(sockfd, buf, sizeof(buf) - 1, 0, (struct sockaddr*)&source, &source_len);
-        if (n < 0)
-        {
-            if (errno == EINTR) continue;
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-            perror("broadcast.recvfrom");
-            break;
-        }
-        if (n == 0) break;
-        buf[n] = '\0';
-        
-        char type[TYPE_SIZE], id[ID_SIZE], name[NAME_SIZE];
-        int scanned = sscanf(buf, "%16s %127s %127s", type, id, name);
-        if (scanned == 3)
-        {
-            DeviceInfo di;
-            di.id = id;
-            di.name = name;
-            di.addr = source;
-            printf("%s %s %s\n", type, id, name);
-            devices.push_back(di);
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) return false;
+    bool found = false;
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) continue;
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+            // skip loopback
+            if (ifa->ifa_flags & IFF_LOOPBACK) continue;
+            char host[NI_MAXHOST];
+            int s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if (s == 0) {
+                out_ip = string(host);
+                found = true;
+                break;
+            }
         }
     }
-    return devices;
+    freeifaddrs(ifaddr);
+    return found;
+}
+
+vector<Device*> scan_devices(uint16_t port)
+{
+    vector<Device*> found_devices;
+    string local_ip;
+    if (!get_local_ipv4(local_ip)) {
+        cerr << "Failed to detect local IPv4 address." << endl;
+        throw runtime_error("No local IPv4");
+    }
+    // extract base (first 3 octets) and last octet
+    vector<string> parts;
+
+    stringstream sp(local_ip);
+    string item;
+    while (getline(sp, item, '.')) parts.push_back(item);
+    if (parts.size() != 4) {
+        cerr << "Unexpected local IP format: " << local_ip << endl;
+        throw runtime_error("Unexpected local IP format");
+    }
+    string base = parts[0] + "." + parts[1] + "." + parts[2];
+    int mylast = atoi(parts[3].c_str());
+
+    cout << "Local IP detected: " << local_ip << " — scanning " << base << ".1-254 on port " << port << " (skipping " << mylast << ")" << endl;
+    for (int i = 1; i <= 254; ++i) {
+        if (i == mylast) continue;
+        string ip = base + "." + to_string(i);
+        int s = connect_to(ip, port, 1);
+        if (s < 0) continue;
+        // Send scan command '1'
+        send_line(s, "1");
+        string resp = recv_line(s);
+        if (!resp.empty()) {
+            cout << "Found sensor at " << ip << ": " << resp << endl;
+        }
+        found_devices.push_back(new Device(ip, resp));
+        cout << "----------------------------" << endl;
+    }
+    cout << "Scan complete. Found " << found_devices.size() << " device(s)." << endl;
+    return found_devices;
 }
