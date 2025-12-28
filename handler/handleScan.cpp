@@ -1,6 +1,12 @@
 #include "../common/index.hpp"
 #include "handleScan.hpp"
 
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
 bool get_local_ipv4(string &out_ip)
 {
     struct ifaddrs *ifaddr, *ifa;
