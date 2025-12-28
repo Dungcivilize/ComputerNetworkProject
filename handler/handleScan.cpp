@@ -52,12 +52,19 @@ vector<Device*> scan_devices(uint16_t port)
         int s = connect_to(ip, port, 1);
         if (s < 0) continue;
         // Send scan command '1'
-        send_line(s, "1");
-        string response;
-        recv_line(s, response);
-        if (!response.empty()) {
-            cout << "Found sensor at " << ip << ": " << response << endl;
+        if (send_message(s, "1") < 0) {
+            close(s);
+            cout << "Failed to send scan message to " << ip << endl;
+            continue;
         }
+        string response;
+        
+        if (recv_message(s, response) <= 0) {
+            close(s);
+            cout << "No response from " << ip << endl;
+            continue;
+        }
+        cout << "Found sensor at " << ip << ": " << response << endl;
         found_devices.push_back(new Device(ip, port, s, response));
         cout << "----------------------------" << endl;
     }
