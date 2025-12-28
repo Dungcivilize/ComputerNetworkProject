@@ -7,7 +7,7 @@ using namespace std;
 void handle_response(std::string response);
 std::string get_status_message(int status_code);
 
-void call_api(int sockfd, string request) {
+void call_api(int sockfd, string request, void* output = nullptr) {
     std::string response;
     if (send_message(sockfd, request) <= 0) {
         cout << "Failed to send message to device." << endl;
@@ -17,10 +17,10 @@ void call_api(int sockfd, string request) {
         cout << "Failed to receive message from device." << endl;
         return;
     }
-    handle_response(response);
+    handle_response(response, output);
 }
 
-void handle_response(std::string response) {
+void handle_response(std::string response, void* output = nullptr) {
     string status_code, power_data, data;
     stringstream ss(response);
     ss >> status_code;
@@ -36,6 +36,7 @@ void handle_response(std::string response) {
         case 200:
             ss >> data;
             cout << "Device token: " << data << endl;
+            output = (void*)data.c_str();
             break;
         case 310:
             ss >> power_data >> data;
