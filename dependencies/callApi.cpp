@@ -4,7 +4,7 @@
 
 using namespace std;    
 
-void handle_response(std::string response);
+void handle_response(std::string response, void* output = nullptr);
 std::string get_status_message(int status_code);
 
 void call_api(int sockfd, string request, void* output = nullptr) {
