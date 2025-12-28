@@ -34,3 +34,20 @@ static string randstr(size_t len)
         s.push_back(alphabet[dist(rng)]);
     return s;
 }
+
+template <class Ty>
+static ssize_t find_by_id(vector<Ty>& list, const string& id)
+{
+    try
+    {
+        for (size_t idx = 0; idx < list.size(); idx++)
+            if (list[idx].id == id)
+                return (ssize_t)idx;
+        return -1;
+    }
+    catch (invalid_argument e)
+    {
+        cerr << "Generic class passed in does not contain id field: " + string(e.what()) << endl;
+        return -1;
+    }
+}

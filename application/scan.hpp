@@ -1,12 +1,15 @@
 #pragma once
 
+#define CONNECTION_TIME_LIMIT 5
+#define RESPONSE_TIME_LIMIT 100
+
 #include "framework.hpp"
 #include "device.hpp"
 #include "streamtransmission.hpp"
 #include "utils.hpp"
 
 /* Get current local IPv4 address assuming there's only one network. */
-static bool get_localaddr(char* network, char* broadcast)
+static bool get_localaddr(char* network, char* broadcast, int& prefix)
 {
     struct ifaddrs *ifaddr = NULL;
     if (getifaddrs(&ifaddr) == -1) 
@@ -27,6 +30,7 @@ static bool get_localaddr(char* network, char* broadcast)
         
         uint32_t ip = ntohl(sa_ip->sin_addr.s_addr);
         uint32_t mask = ntohl(sa_sm->sin_addr.s_addr);
+        prefix = __builtin_popcount(mask);
 
         uint32_t net = ip & mask;
         uint32_t bcast = net | (~mask);
@@ -122,7 +126,7 @@ static bool try_connect(sockaddr_in sa, const string& id, string& resp, int& exe
     pfd.fd = fd;
     pfd.events = POLLOUT;
 
-    rc = poll(&pfd, 1, CONN_TIME_LIMIT);
+    rc = poll(&pfd, 1, CONNECTION_TIME_LIMIT);
     if (rc == 0) 
     {
         close(fd);
@@ -153,7 +157,7 @@ static bool try_connect(sockaddr_in sa, const string& id, string& resp, int& exe
     
     timeval tv{};
     tv.tv_sec  = 0;
-    tv.tv_usec = RESP_TIME_LIMIT * 1000;
+    tv.tv_usec = RESPONSE_TIME_LIMIT * 1000;
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     
@@ -163,13 +167,12 @@ static bool try_connect(sockaddr_in sa, const string& id, string& resp, int& exe
 }
 
 /* Parse message if success. */
-static bool parse_scan_reply(const string& resp, string& id, string& name, string& type)
+static bool parse_scan_reply(const string& resp, string& id, string& type)
 {   
     vector<string> tokens = parse_info_message(resp);
     if (tokens.empty()) return false;
     id = tokens[0];
-    name = tokens[1];
-    type = tokens[2];
+    type = tokens[1];
     return true;
 }
 
@@ -182,12 +185,18 @@ static bool scan(vector<DeviceInfo>& devices, const string& id)
     string resp;
     int exec_code = 0;
 
-    int so[4], eo[4];
+    int so[4], eo[4], prefix;
     char net[INET_ADDRSTRLEN], bcast[INET_ADDRSTRLEN], ip[INET_ADDRSTRLEN];
-    if (!get_localaddr(net, bcast)) return false;
+    if (!get_localaddr(net, bcast, prefix))
+    {
+        cerr << "Cannot retrieve current local IPv4 address" << endl;
+        return false;
+    }
     sscanf(net, "%d.%d.%d.%d", &so[0], &so[1], &so[2], &so[3]);
     sscanf(bcast, "%d.%d.%d.%d", &eo[0], &eo[1], &eo[2], &eo[3]);
     so[3]++;
+    double expected_wait_time = (pow(2, 32 - prefix) - 2) * CONNECTION_TIME_LIMIT / 1000;
+    cout << "Begin scanning. Expected wait time: " + to_string(expected_wait_time) + "s" << endl;
     
     // Scan on local network
     while (!(so[0] == eo[0] && so[1] == eo[1] && so[2] == eo[2] && so[3] == eo[3]))
@@ -210,12 +219,13 @@ static bool scan(vector<DeviceInfo>& devices, const string& id)
         
         if (try_connect(sa, id, resp, exec_code))
         {
-            string device_id, name, type;
-            if (!parse_scan_reply(resp, device_id, name, type))
+            string device_id, type;
+            if (!parse_scan_reply(resp, device_id, type))
                 continue;
-            devices.push_back(DeviceInfo(sa, device_id, name, type));
+            devices.push_back(DeviceInfo(sa, device_id, type));
+            cout << "Found " + type + " " + device_id + " at " + string(ip) << endl;
         }
     }
- 
+    cout << "Scan finished. Found " + to_string(devices.size()) + " devices" << endl;
     return true;
 }

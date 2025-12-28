@@ -4,102 +4,76 @@
 #include "utils.hpp"
 #include "connect.hpp"
 #include "changepassword.hpp"
+#include "config.hpp"
+#include "power.hpp"
 
-static void execute_scan(vector<DeviceInfo>& available, const string& id)
+void display_info(vector<Device>& devices, const string& id)
 {
-    if (!scan(available, id))
-        cerr << "An error occured while scanning for devices" << endl;
+    ssize_t index = find_by_id(devices, id);
+    if (index >= 0)
+        cout << "Device info:\n" + devices[index].display() << endl;
     else
-    {
-        if (available.empty())
-            cout << "No device found" << endl;
-        else
-        {
-            cout << "Device found:" << endl;
-            for (auto& dev : available)
-                cout << dev.type + " " + dev.id + " " + dev.name << endl;
-        }
-    }
-}
-
-static void execute_connect(vector<DeviceInfo>& available, const string& device_id, const string& app_id, const string& password, vector<Device>& connected)
-{
-    size_t index = -1;
-    for (size_t idx = 0; idx < available.size(); idx++)
-        if (available[idx].id == device_id)
-        {
-            index = idx;
-            break;
-        }
-    if (index == -1)
-    {
-        cerr << "Unknown device ID. Please use SCAN to check for this ID again" << endl;
-        return;
-    }
-
-    int code = 0;
-    string resp;
-    if (connection(available[index], app_id, password, resp, code, connected))
-        cout << "Connection successful with code " + to_string(code) << endl;
-    else
-        cerr << "Err " + to_string(code) + ": " + resp << endl; 
-}
-
-static void execute_change_password(vector<Device>& connected, const string& device_id, const string& current_pass, const string& new_pass)
-{
-    size_t index = -1;
-    for (size_t idx = 0; idx < connected.size(); idx++)
-        if (connected[idx].id == device_id)
-        {
-            index = idx;
-            break;
-        }
-    if (index == -1)
-    {
-        cerr << "You have not connected to device with this ID yet" << endl;
-        return;
-    }
-
-    int code = 0;
-    string resp;
-    if (change_password(connected[index], current_pass, new_pass, resp, code))
-        cout << "Change password successful" << endl;
-    else
-        cerr << "Err " + to_string(code) + ": " + resp << endl;
+        cerr << "Error: No such device is connected." << endl;
 }
 
 int main(int argc, char* argv[])
 {
     string id = randstr(ID_SIZE);
     cout << "Application running. ID: " + id << endl;
+    cout << "Type \"help all\" to see all action." << endl;
     
     string cmdline;
     vector<DeviceInfo> available;
     vector<Device> connected;
     while (true)
     {
+        cout << "> ";   
         getline(cin, cmdline);
         stringstream ss(cmdline);
 
         string cmd;
         ss >> cmd;
 
-        if (cmd == "SCAN")
-            execute_scan(available, id);
-        else if (cmd == "CONNECT")
+        if (cmd == "scan")
+            scan(available, id);
+        else if (cmd == "connect")
         {
             string device_id, password;
             ss >> device_id >> password;
             execute_connect(available, device_id, id, password, connected);
         }
-        else if (cmd == "CHANGE_PW")
+        else if (cmd == "changepassword")
         {
             string device_id, current_pass, new_pass;
             ss >> device_id >> current_pass >> new_pass;
             execute_change_password(connected, device_id, current_pass, new_pass);
         }
+        else if (cmd == "config")
+        {
+            string device_id, param;
+            int value;
+            ss >> device_id >> param >> value;
+            execute_config(connected, device_id, param, value);
+        }
+        else if (cmd == "quit")
+        {
+            cout << "Program terminated." << endl;
+            break;
+        }
+        else if (cmd == "display")
+        {
+            string device_id;
+            ss >> device_id;
+            display_info(connected, device_id);
+        }
+        else if (cmd == "power")
+        {
+            string device_id, mode;
+            ss >> device_id >> mode;
+            execute_power(connected, device_id, mode);
+        }
         else
-            cerr << "Unknown command" << endl;
+            cerr << "Unknown action. Type \"help all\" to see all actions." << endl;
     }
     return 0;
 }

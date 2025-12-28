@@ -15,13 +15,13 @@
 
 // Network constants
 #define PORT 5000
-#define CONN_TIME_LIMIT 10
-#define RESP_TIME_LIMIT 100
 
 // Success codes
 #define SUCCESS_SCAN 100
 #define SUCCESS_CONNECTION 200
+#define SUCCESS_COMMAND 300
 #define SUCCESS_PW_CHANGE 400
+#define SUCCESS_QUERY 500
 #define SUCCESS_CONFIG 700
 
 // Error codes

@@ -21,7 +21,9 @@
 // Success codes
 #define SUCCESS_SCAN 100
 #define SUCCESS_CONNECTION 200
+#define SUCCESS_COMMAND 300
 #define SUCCESS_PW_CHANGE 400
+#define SUCCESS_QUERY 500
 #define SUCCESS_CONFIG 700
 
 // Error codes
@@ -31,6 +33,8 @@
 #define ERROR_SCAN_BLOCKED 101
 #define ERROR_PW_INCORRECT 201
 #define ERROR_INVALID_TOKEN 401
+#define ERROR_INVALID_PARAM 701
+#define ERROR_INVALID_VALUE 702
 
 // POSIX C libs for socket programming
 #include <arpa/inet.h>
@@ -49,6 +53,7 @@
 #include <poll.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <time.h>
 
 // C++ libs
 #include <bits/stdc++.h>

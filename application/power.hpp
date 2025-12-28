@@ -5,9 +5,9 @@
 #include "streamtransmission.hpp"
 #include "utils.hpp"
 
-static bool change_password(Device& device, const string& current_pass, const string& new_pass, string& resp, int& exec_code)
+static bool power(Device& device, const string& mode, string& resp, int& exec_code)
 {
-    string buf = "CHANGE_PW " + device.token + " " + current_pass + " " + new_pass;
+    string buf = "POWER " + device.token + " " + mode;
     
     if (!send_message(device.fd, buf))
     {
@@ -25,7 +25,7 @@ static bool change_password(Device& device, const string& current_pass, const st
     stringstream ss(buf);
     string cmd;
     ss >> cmd;
-    if (cmd != "CHANGE_PW")
+    if (cmd != "POWER")
     {
         exec_code = ERROR_BAD_REQUEST;
         resp = "Response does not match the expected format for this protocol";
@@ -36,10 +36,12 @@ static bool change_password(Device& device, const string& current_pass, const st
     auto p2 = buf.find(' ', p1 + 1);
     resp = buf.substr(p2 + 1);
 
-    return exec_code == SUCCESS_PW_CHANGE;
+    if (exec_code != SUCCESS_COMMAND) return false;
+    device.params[0] = 1;
+    return true;
 }
 
-static void execute_change_password(vector<Device>& connected, const string& device_id, const string& current_pass, const string& new_pass)
+static void execute_power(vector<Device>& connected, const string& device_id, const string& mode)
 {
     size_t index = find_by_id(connected, device_id);
     if (index == -1)
@@ -48,8 +50,8 @@ static void execute_change_password(vector<Device>& connected, const string& dev
     {
         int code = 0;
         string resp;
-        if (change_password(connected[index], current_pass, new_pass, resp, code))
-            cout << "Password changed. Status code: " + to_string(code) << endl;
+        if (power(connected[index], mode, resp, code))
+            cout << "Set power successful. Status code: " + to_string(code) << endl;
         else
             cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
     }
