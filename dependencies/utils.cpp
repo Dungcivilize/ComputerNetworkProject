@@ -1,4 +1,9 @@
 #include "utils.hpp"
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 void trim(char* s) 
 {

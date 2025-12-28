@@ -2,12 +2,6 @@
 #include "handleScan.hpp"
 #include "../dependencies/index.hpp"
 
-#include <ifaddrs.h>
-#include <net/if.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
 vector<Device*> scan_devices(uint16_t port)
 {
     vector<Device*> found_devices;
