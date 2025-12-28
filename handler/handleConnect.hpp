@@ -1,3 +1,3 @@
 #include "../common/index.hpp"
 
-Device* establish_connection(DeviceInfo info, string password);
+void handleConnect(std::vector<Device*>& devices, int app_id);
