@@ -7,29 +7,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-bool get_local_ipv4(string &out_ip)
-{
-    struct ifaddrs *ifaddr, *ifa;
-    if (getifaddrs(&ifaddr) == -1) return false;
-    bool found = false;
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr) continue;
-        if (ifa->ifa_addr->sa_family == AF_INET) {
-            // skip loopback
-            if (ifa->ifa_flags & IFF_LOOPBACK) continue;
-            char host[NI_MAXHOST];
-            int s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-            if (s == 0) {
-                out_ip = string(host);
-                found = true;
-                break;
-            }
-        }
-    }
-    freeifaddrs(ifaddr);
-    return found;
-}
-
 vector<Device*> scan_devices(uint16_t port)
 {
     vector<Device*> found_devices;

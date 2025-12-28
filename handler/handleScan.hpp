@@ -3,4 +3,5 @@
 #include "../dependencies/index.hpp"
 #include "../common/dataStructure.hpp"
 
-vector<DeviceInfo> scan_devices(uint16_t port);
+// Return allocated Device* objects; caller must manage lifetime.
+std::vector<Device*> scan_devices(uint16_t port);
