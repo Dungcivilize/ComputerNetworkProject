@@ -1,6 +1,6 @@
 #include "../common/index.hpp"
 #include "handleScan.hpp"
-#include "../dependencies/utils.hpp"
+#include "../dependencies/index.hpp"
 
 #include <ifaddrs.h>
 #include <net/if.h>
