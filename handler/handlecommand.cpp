@@ -55,7 +55,7 @@ bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
     {
         selected_device = listDeviceToSelect(devices);
         if (!selected_device)
-            return;
+            return true;
         call_api(selected_device->sockfd, to_string(8) + " " + selected_device->info.token);
     }
     else if (cmd == "6")
