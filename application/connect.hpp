@@ -118,7 +118,7 @@ static void execute_connect(vector<DeviceInfo>& available, const string& device_
         if (connection(available[index], app_id, password, resp, code, connected))
         {
             cout << "Connection successful. Status code: " + to_string(code) << endl;
-            execute_query(connected, connected.back().id);
+            execute_query_after_connection(connected, connected.back().id);
         }
         else
             cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl; 

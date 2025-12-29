@@ -4,10 +4,12 @@
 
 unordered_map<string, string> credentials;
 string id = randstr(16);
-string password = "sensor";
-const string type = "sensor";
+string password = "light";
+const string type = "light";
 int power = 0;
-int T = 10;
+int P = 10;
+int S = 5;
+vector<string> schedule;
 ofstream file;
 
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
@@ -15,7 +17,7 @@ pthread_cond_t cnd = PTHREAD_COND_INITIALIZER;
 
 void work()
 {
-    cout << "SYS: Evaluating nutrients." << endl;
+    cout << "SYS: Light on with P = " + to_string(P) + " for " + to_string(S) + "s" << endl;
     vector<double> stats = randnumbers(4, 0, 100);
     time_t now = time(NULL);
     struct tm tm;
@@ -24,30 +26,11 @@ void work()
     char buf[64];
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
     string timestamp(buf);
-    
-    file << timestamp + " H=" + to_string(stats[0]) + " N=" + to_string(stats[1]) + " P=" + to_string(stats[2]) + " K=" + to_string(stats[3]) << endl; 
+
+    file << timestamp + " P=" + to_string(P) + " S=" + to_string(S) << endl; 
 }
 
-void* work_thread(void* arg)
-{
-    pthread_mutex_lock(&m);
-    while (true)
-    {
-        while (!power)
-            pthread_cond_wait(&cnd, &m);
-
-        timespec t;
-        clock_gettime(CLOCK_REALTIME, &t);
-        t.tv_sec += T * 60;
-
-        int rc = pthread_cond_timedwait(&cnd, &m, &t);
-        if (!power || (rc == 0)) continue;
-
-        pthread_mutex_unlock(&m);
-        work();
-        pthread_mutex_lock(&m);
-    }
-}
+// void* work_thread(void* arg);
 
 bool check_credential(unordered_map<string, string>& credentials, const string& token)
 {
@@ -58,7 +41,7 @@ bool check_credential(unordered_map<string, string>& credentials, const string& 
 int main(int argc, char* argv[])
 {
     file.open("activity_log.txt");
-    cout << "Sensor running:\nID: " + id + "\nPassword: " + password << endl;
+    cout << "Light running:\nID: " + id + "\nPassword: " + password << endl;
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0)
@@ -88,6 +71,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    /*
     pthread_t background;
     if (pthread_create(&background, nullptr, work_thread, NULL) != 0)
     {
@@ -95,6 +79,7 @@ int main(int argc, char* argv[])
         close(server_fd);
         return 1;
     }
+    */
 
     vector<pollfd> pfds;
     pfds.push_back({server_fd, POLLIN, 0});   
@@ -200,15 +185,20 @@ int main(int argc, char* argv[])
                     else if (scope != "STATE" && scope != "PARAM" && scope != "SCHEDULE" && scope != "ALL")
                     {
                         reply = "QUERY " + to_string(ERROR_INVALID_SCOPE) + " Invalid scope";
-                        cout << to_string(ERROR_INVALID_SCOPE) + ": Invalid scope received: " + scope + ". Request from: " + credentials[token] << endl;
+                        cout << to_string(ERROR_INVALID_SCOPE) + ": Invalid scope received: " + scope + ". Request from: " + credentials[token] << endl;   
                     }
                     else
                     {
                         string message;
+                        string display_schedule;
+                        if (schedule.empty()) display_schedule = "NaN";
+                        else
+                            for (size_t idx = 0; idx < schedule.size(); idx++)
+                                display_schedule += (idx == schedule.size() - 1 ? schedule[idx] : (schedule[idx] + ":"));
                         if (scope == "STATE") message = to_string(power);
-                        else if (scope == "PARAM") message = to_string(T);
-                        else if (scope == "SCHEDULE") message = "NaN";
-                        else message = to_string(power) + ":" + to_string(T) + ":" + "NaN";
+                        else if (scope == "PARAM") message = to_string(P) + ":" + to_string(S);
+                        else if (scope == "SCHEDULE") message = display_schedule;
+                        else message = to_string(power) + ":" + to_string(P) + ":" + to_string(S) + ":" + display_schedule;
                         reply = "QUERY " + to_string(SUCCESS_QUERY) + " " + message;
                         cout << to_string(SUCCESS_QUERY) + ": Query OK. Request from: " + credentials[token] << endl;
                     }
@@ -223,24 +213,24 @@ int main(int argc, char* argv[])
                         reply = "CONFIG " + to_string(ERROR_INVALID_TOKEN) + " Invalid token";
                         cout << to_string(ERROR_INVALID_TOKEN) + ": Cannot identify received credential token" << endl;
                     }
-                    else if (param != "T")
+                    else if (param != "P" && param != "S")
                     {
                         reply = "CONFIG " + to_string(ERROR_INVALID_PARAM) + " Unknown parameter";
                         cout << to_string(ERROR_INVALID_PARAM) + ": Unknown parameter. Request from: " + credentials[token] << endl;
                     }
                     else if (value <= 0)
                     {
-                        reply = "CONFIG " + to_string(ERROR_INVALID_VALUE) + " T must greater than 0";
+                        reply = "CONFIG " + to_string(ERROR_INVALID_VALUE) + " Value must greater than 0";
                         cout << to_string(ERROR_INVALID_VALUE) + ": Invalid value received. Request from: " + credentials[token] << endl;
                     }
                     else
                     {
                         pthread_mutex_lock(&m);
-                        T = value;
+                        if (param == "P") P = value; else S = value;
                         pthread_cond_signal(&cnd);
                         pthread_mutex_unlock(&m);
                         reply = "CONFIG " + to_string(SUCCESS_CONFIG) + " OK";
-                        cout << to_string(SUCCESS_CONFIG) + ": T has been set to " + to_string(T) + ". Request from: " + credentials[token] << endl;
+                        cout << to_string(SUCCESS_CONFIG) + ": " + param + " has been set to " + to_string(P) + ". Request from: " + credentials[token] << endl;
                     }
                 }
                 else if (cmd == "POWER")
@@ -265,6 +255,22 @@ int main(int argc, char* argv[])
                         pthread_mutex_unlock(&m);
                         reply = "POWER " + to_string(SUCCESS_COMMAND) + " OK";
                         cout << to_string(SUCCESS_COMMAND) + ": Power turned " + (power ? "on" : "off") + ". Request from: " + credentials[token] << endl;
+                    }
+                }
+                else if (cmd == "LIGHT")
+                {
+                    string token;
+                    ss >> token;
+                    if (!check_credential(credentials, token))
+                    {
+                        reply = "LIGHT " + to_string(ERROR_INVALID_TOKEN) + " Invalid token";
+                        cout << to_string(ERROR_INVALID_TOKEN) + ": Cannot identify received credential token" << endl;
+                    }
+                    else
+                    {
+                        reply = "LIGHT " + to_string(SUCCESS_COMMAND) + " Lights ON";
+                        cout << to_string(SUCCESS_COMMAND) + ": Lights turn on. Request from: " + credentials[token] << endl;
+                        work();
                     }
                 }
                 else

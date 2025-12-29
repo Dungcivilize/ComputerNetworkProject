@@ -6,6 +6,7 @@
 #include "changepassword.hpp"
 #include "config.hpp"
 #include "power.hpp"
+#include "light.hpp"
 
 void display_info(vector<Device>& devices, const string& id)
 {
@@ -71,6 +72,12 @@ int main(int argc, char* argv[])
             string device_id, mode;
             ss >> device_id >> mode;
             execute_power(connected, device_id, mode);
+        }
+        else if (cmd == "light")
+        {
+            string device_id;
+            ss >> device_id;
+            execute_light(connected, device_id);
         }
         else
             cerr << "Unknown action. Type \"help all\" to see all actions." << endl;

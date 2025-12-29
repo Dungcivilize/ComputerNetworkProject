@@ -18,7 +18,9 @@ struct Device
     string id;
     string type;
     string token;
+    int state;
     vector<int> params;
+    vector<string> schedule;
 
     // Main constructor
     Device(int fd, string id, string type, string token) : fd(fd), id(id), type(type), token(token) {}
@@ -28,7 +30,7 @@ struct Device
     Device& operator=(const Device&) = delete;
 
     Device(Device&& other) noexcept : fd(other.fd), id(std::move(other.id)),
-        type(std::move(other.type)), token(std::move(other.token)), params(std::move(other.params)) 
+        type(std::move(other.type)), token(std::move(other.token)), state(std::move(other.state)), params(std::move(other.params)) , schedule(std::move(other.schedule))
     {
         other.fd = -1;
     }
@@ -42,7 +44,9 @@ struct Device
             id = std::move(other.id);
             type = std::move(other.type);
             token = std::move(other.token);
+            state = std::move(other.state);
             params = std::move(other.params);
+            schedule = std::move(other.schedule);
         }
         return *this;
     }
@@ -54,30 +58,28 @@ struct Device
     {
         string params;
         if (type == "sensor")
-            params = "T: " + to_string(this->params[1]); 
+            params = "T: " + to_string(this->params[0]); 
         else if (type == "light")
-            params = "P: " + to_string(this->params[1]);
+        {
+            params = "P: " + to_string(this->params[0]) +
+            "\nS: " + to_string(this->params[1]);
+        }
         else if (type == "sprinkler")
         {
-            params = "Hmin: " + to_string(this->params[1]) +
-            "\nHmax: " + to_string(this->params[2]);
+            params = "Hmin: " + to_string(this->params[0]) +
+            "\nHmax: " + to_string(this->params[1]);
         }
         else if (type == "fertilizer")
         {
-            params = "C: " + to_string(this->params[1]) +
-            "\nV: " + to_string(this->params[2]) +
-            "\nNmin: " + to_string(this->params[3]) +
-            "\nPmin: " + to_string(this->params[4]) +
-            "\nKmin: " + to_string(this->params[5]);
+            params = "C: " + to_string(this->params[0]) +
+            "\nV: " + to_string(this->params[1]) +
+            "\nNmin: " + to_string(this->params[2]) +
+            "\nPmin: " + to_string(this->params[3]) +
+            "\nKmin: " + to_string(this->params[4]);
         }
         return "ID: " + this->id +
         "\nType: " + this->type + 
-        "\nPower: " + (this->params[0] ? "ON" : "OFF") +
+        "\nState: " + (this->state ? "ON" : "OFF") +
         "\n" + params;
-    }
-
-    void set_params(vector<int> params)
-    {
-        this->params = params;
     }
 };

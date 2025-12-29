@@ -38,16 +38,16 @@ static bool config(Device& device, const string& param, int value, string& resp,
 
     if (exec_code != SUCCESS_CONFIG) return false;
 
-    if (device.type == "sensor" || device.type == "light" || (device.type == "sprinkler" && param == "HMIN") || (device.type == "fertilizer" && param == "C"))
+    if (device.type == "sensor" || (device.type == "light" && param == "P") || (device.type == "sprinkler" && param == "HMIN") || (device.type == "fertilizer" && param == "C"))
+        device.params[0] = value;
+    else if ((device.type == "sprinkler" && param == "HMAX") || (device.type == "fertilizer" && param == "V") || (device.type == "LIGHT" && param == "S"))
         device.params[1] = value;
-    else if ((device.type == "sprinkler" && param == "HMAX") || (device.type == "fertilizer" && param == "V"))
-        device.params[2] = value;
     else if (param == "NMIN")
-        device.params[3] = value;
+        device.params[2] = value;
     else if (param == "PMIN")
-        device.params[4] = value;
+        device.params[3] = value;
     else
-        device.params[5] = value;
+        device.params[4] = value;
 
     return true;
 }
