@@ -65,7 +65,7 @@ string generate_token(string name, size_t bytes)
     return oss.str();
 }
 
-void handle_connect(string peer_ip, ClientInfo* info, stringstream& ss, string pass, string token) {
+void handle_connect(string peer_ip, ClientInfo* info, stringstream& ss, string pass, string &token) {
     cout << "Received connect request from client " << peer_ip << endl;
     vector<string> params;
     string response;

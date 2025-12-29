@@ -92,9 +92,11 @@ public:
                 cout << "Received scan request from client " << peer_ip << endl;
                 response = "100 " + id + " " + name + " " + sensor_type;
                 send_message(clientfd, response);
+                continue;
             } else if (cmd == "2") {
                 handle_connect(peer_ip, info, ss, pass, token);
-            }
+                continue;
+            } 
             if (!requires_authentication(token, ss, clientfd)) {
                 continue;
             } 
