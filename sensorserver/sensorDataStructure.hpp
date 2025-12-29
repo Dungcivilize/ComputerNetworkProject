@@ -2,11 +2,13 @@
 #include <ctime>
 #include "sensor.hpp"
 using namespace std;
+
 struct ClientInfo {
     Sensor* self;
     int clientfd;
     int app_id;
 };
+
 class SensorDataStructure {
     public:
         bool powered_on;

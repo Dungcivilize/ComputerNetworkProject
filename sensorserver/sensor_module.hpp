@@ -2,7 +2,6 @@
 #include <string>
 #include "../dependencies/index.hpp"
 #include "sensorDataStructure.hpp"
-#include "sensor.hpp"
 
 bool requires_authentication(std::string token, stringstream& ss, int clientfd) {
     string inp_token;
