@@ -1,7 +1,11 @@
+#ifndef SENSORSERVER_SENSORDATASTRUCTURE_HPP
+#define SENSORSERVER_SENSORDATASTRUCTURE_HPP
+
 #include <string>
 #include <ctime>
-#include "sensor.hpp"
 using namespace std;
+
+class Sensor; // forward declaration to avoid circular include
 
 struct ClientInfo {
     Sensor* self;
@@ -131,4 +135,7 @@ class SprinklerDataStructure : public SensorDataStructure {
         }
     private:
         string id;
+};
+
+#endif // SENSORSERVER_SENSORDATASTRUCTURE_HPP
 };
