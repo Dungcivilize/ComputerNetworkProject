@@ -43,6 +43,10 @@ void handle_response(std::string response, void* output) {
             }
             break;
         }
+        case 300:
+            // Nếu là 300 thì báo rằng không có trạng thái trả về do chỉ là xác nhận thành công
+            cout << "No additional data for control confirmation because target device only confirms success." << endl;
+            break;
         case 310:
             ss >> power_data >> data;
             cout << "Power state changed to " << (data == "1" ? "ON" : "OFF") << endl;
