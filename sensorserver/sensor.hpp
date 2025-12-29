@@ -9,8 +9,20 @@
 #include <iomanip>
 #include <cstring>
 #include <errno.h>
-#include "sensor_module.hpp"
 #include "sensorDataStructure.hpp"
+
+// forward declare to allow ClientInfo to hold a Sensor* before Sensor is defined
+class Sensor;
+
+class ClientInfo {
+    public:
+        Sensor* self;
+        int clientfd;
+        int app_id;
+        ClientInfo(Sensor* self, int clientfd, int app_id) : self(self), clientfd(clientfd), app_id(app_id) {}   
+};
+#include "sensor_module_fwd.hpp"
+
 
 class Sensor
 {
@@ -37,6 +49,10 @@ public:
         } else 
             data = SensorDataStructure();
     }
+
+    // Convenience overload used by tests: default sensor_type to "SENSOR"
+    Sensor(uint16_t port, const string& sensor_id, const string& sensor_name, const string& sensor_pass)
+        : Sensor(port, sensor_id, string("SENSOR"), sensor_name, sensor_pass) {}
 
     ~Sensor()
     {
@@ -142,7 +158,7 @@ public:
             }
 
             // spawn detached thread to handle client
-            ClientInfo* info = new ClientInfo{this, clientfd, 0};
+            ClientInfo* info = new ClientInfo(this, clientfd, -1);  
             pthread_t tid;
             if (pthread_create(&tid, NULL, Sensor::client_thread_start, info) != 0)
             {
@@ -155,5 +171,8 @@ public:
         }
     }
 };
+
+
+#include "sensor_module.hpp"
 
 #endif // SENSORSERVER_SENSOR_HPP

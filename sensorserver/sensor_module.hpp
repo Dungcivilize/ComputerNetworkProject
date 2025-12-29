@@ -3,6 +3,9 @@
 #include "../dependencies/index.hpp"
 #include "sensorDataStructure.hpp"
 
+// forward declare ClientInfo to avoid circular include with sensor.hpp
+class ClientInfo;
+
 bool requires_authentication(std::string token, stringstream& ss, int clientfd) {
     string inp_token;
     if (!(ss >> inp_token)) {
@@ -16,7 +19,7 @@ bool requires_authentication(std::string token, stringstream& ss, int clientfd) 
     return true;
 }
 
-bool read_from_ss(stringstream& ss, int clientfd, std::vector<std::string>& out, int count, std::string response_on_fail = "3") {
+bool read_from_ss(stringstream& ss, int clientfd, std::vector<std::string>& out, int count, std::string response_on_fail) {
     out.clear();
     for (int i = 0; i < count; ++i) {
         std::string temp;
@@ -29,7 +32,7 @@ bool read_from_ss(stringstream& ss, int clientfd, std::vector<std::string>& out,
     return true;
 }
 
-void handle_control_commands(int clientfd, stringstream& ss, string type = "sensor")
+void handle_control_commands(int clientfd, stringstream& ss, string type)
 {
     string response;
     if (type == "sprinkler") {
@@ -43,7 +46,7 @@ void handle_control_commands(int clientfd, stringstream& ss, string type = "sens
 }
 
 // Generate a token derived from sensor name and random entropy
-string generate_token(string name, size_t bytes = 16)
+string generate_token(string name, size_t bytes)
 {
     // seed RNG with combination of name hash and random_device
     size_t name_hash = std::hash<string>{}(name);

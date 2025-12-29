@@ -3,15 +3,8 @@
 
 #include <string>
 #include <ctime>
+#include <iostream>
 using namespace std;
-
-class Sensor; // forward declaration to avoid circular include
-
-struct ClientInfo {
-    Sensor* self;
-    int clientfd;
-    int app_id;
-};
 
 class SensorDataStructure {
     public:
@@ -138,4 +131,3 @@ class SprinklerDataStructure : public SensorDataStructure {
 };
 
 #endif // SENSORSERVER_SENSORDATASTRUCTURE_HPP
-};
