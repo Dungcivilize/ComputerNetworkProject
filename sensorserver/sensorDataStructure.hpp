@@ -1,7 +1,12 @@
 #include <string>
 #include <ctime>
-
+#include "sensor.hpp"
 using namespace std;
+struct ClientInfo {
+    Sensor* self;
+    int clientfd;
+    int app_id;
+};
 class SensorDataStructure {
     public:
         bool powered_on;
@@ -34,7 +39,7 @@ class SensorDataStructure {
         }
 };
 
-class SprinklerDataStructure : SensorDataStructure {
+class SprinklerDataStructure : public SensorDataStructure {
     public:
         float humidity;
         float min_humidity;
@@ -49,7 +54,8 @@ class SprinklerDataStructure : SensorDataStructure {
         SprinklerDataStructure(string id) : SensorDataStructure() {
             // Đọc từ file config dựa theo id của sprinkler
             // Mở file config
-            string path = "config" + id + ".txt";
+            this->id = id;
+            string path = "config/sprinkler_config_" + id + ".txt";
             FILE* file = fopen(path.c_str(), "r");
             if (file == nullptr) {
                 // Nếu không mở được file, đặt các giá trị mặc định
@@ -60,11 +66,7 @@ class SprinklerDataStructure : SensorDataStructure {
                 base_volume = 50;
                 tank_capacity = 1000;
                 // Lưu các giá trị mặc định vào file
-                file = fopen(path.c_str(), "w");
-                if (file != nullptr) {
-                    fprintf(file, "%f %f %d %d %d %d\n", min_humidity, max_humidity, volume_per_minute, volume_per_humidity_percent, base_volume, tank_capacity);
-                    fclose(file);
-                }
+                save_config();
             } else {
                 // Đọc các thông số từ file
                 fscanf(file, "%f %f %d %d %d %d", &min_humidity, &max_humidity, &volume_per_minute, &volume_per_humidity_percent, &base_volume, &tank_capacity);
@@ -115,4 +117,16 @@ class SprinklerDataStructure : SensorDataStructure {
 
             return power_consumption; // tổng công suất tức thời (W)
         }
+
+        void save_config() {
+            // Lưu các thông số vào file config
+            string path = "config/sprinkler_config_" + id + ".txt";
+            FILE* file = fopen(path.c_str(), "w");
+            if (file != nullptr) {
+                fprintf(file, "%f %f %d %d %d %d\n", min_humidity, max_humidity, volume_per_minute, volume_per_humidity_percent, base_volume, tank_capacity);
+                fclose(file);
+            }
+        }
+    private:
+        string id;
 };

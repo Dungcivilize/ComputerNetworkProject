@@ -10,6 +10,8 @@
 #include <cstring>
 #include <errno.h>
 #include "sensor_module.hpp"
+#include "sensorDataStructure.hpp"
+
 class Sensor
 {
 public:
@@ -30,47 +32,16 @@ public:
         pass = sensor_pass;
         tcpid = create_identity(port, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, INADDR_ANY);
         this->sensor_type = sensor_type;
-        switch (sensor_type)
-        {
-        case "sprinkler":
+        if (sensor_type == "SPRINKLER") {
             data = SprinklerDataStructure(id);
-            break;
-        default:
+        } else 
             data = SensorDataStructure();
-            break;
-        }
-    }
-
-    // Generate a token derived from sensor name and random entropy
-    string generate_token(size_t bytes = 16)
-    {
-        // seed RNG with combination of name hash and random_device
-        size_t name_hash = std::hash<string>{}(name);
-        random_device rd;
-        uint32_t seed = (uint32_t)(name_hash ^ rd());
-        mt19937_64 rng(seed);
-
-        // produce `bytes` random bytes and return hex string prefixed by name
-        std::ostringstream oss;
-        oss << name << "-";
-        for (size_t i = 0; i < bytes; ++i)
-        {
-            uint8_t b = (uint8_t)(rng() & 0xFF);
-            oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
-        }
-        return oss.str();
     }
 
     ~Sensor()
     {
         if (tcpid) delete tcpid;
     }
-
-    struct ClientInfo {
-        Sensor* self;
-        int clientfd;
-        int app_id;
-    };
 
     static void* client_thread_start(void* arg)
     {
@@ -106,15 +77,15 @@ public:
                 response = "100 " + id + " " + name + " " + sensor_type;
                 send_message(clientfd, response);
             } else if (cmd == "2") {
-                handle_connect(peer_ip, info, ss);
+                handle_connect(peer_ip, info, ss, pass, token);
             }
-            if (!requires_authentication(token, ss)) {
+            if (!requires_authentication(token, ss, clientfd)) {
                 continue;
             } 
             if (cmd == "3") {
                 handle_control(peer_ip, data, clientfd, ss);
             } else if (cmd == "4") {
-                if (!read_from_ss(ss, params, 2)) {
+                if (!read_from_ss(ss, clientfd, params, 2)) {
                     continue;
                 }
                 string old_pass = params[0];
@@ -137,27 +108,7 @@ public:
                     send_message(clientfd, response);
                 }
             } else if (cmd == "CONFIG") {
-                if (!authenticated)
-                {
-                    string msg = to_string(ERROR_UNKNOWN_COMMAND) + " Not connected";
-                    send_message(clientfd, msg);
-                    continue;
-                }
-                string param;
-                float value;
-                ss >> param >> value;
-                if (param != "T")
-                {
-                    string msg = to_string(ERROR_INVALID_PARAM) + " No such param for sensor";
-                    send_message(clientfd, msg);
-                }
-                else
-                {
-                    T = value;
-                    cout << "T has been set to: " << T << endl;
-                    string msg = to_string(SUCCESS_PARAM_CHANGE) + " Sensor T value configured";
-                    send_message(clientfd, msg);
-                }
+                
             } else {
                 response = "4";
                 send_message(clientfd, response);

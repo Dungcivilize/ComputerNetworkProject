@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     std::string name;
     std::string pass;
     if (argc < 6) {
-        FILE *file = fopen("sensor_config" + id + ".txt", "r");
+        FILE* file = fopen(("config/sensor_config" + id + ".txt").c_str(), "r");
         if (file == nullptr) {
             if (argc < 4)
             {
@@ -24,14 +24,8 @@ int main(int argc, char* argv[])
                 return 1;
             }
             sensor_type = argv[3];
-            name = (argc >= 5) ? argv[4] : "Sensor_" + id;
-            pass = (argc >= 6) ? argv[5] : "";
-
-            file = fopen("sensor_config" + id + ".txt", "w");
-            if (file != nullptr) {
-                fprintf(file, "%s %s %s\n", sensor_type.c_str(), name.c_str(), pass.c_str());
-                fclose(file);
-            }
+            name = "Sensor_" + id;
+            pass = "123456";
         } else {
             fscanf(file, "%s %s %s", &sensor_type[0], &name[0], &pass[0]);
             fclose(file);
@@ -40,6 +34,12 @@ int main(int argc, char* argv[])
         sensor_type = argv[3];
         name = argv[4];
         pass = argv[5];
+    }
+    // Lưu lại vào file
+    FILE* file = fopen(("config/sensor_config" + id + ".txt").c_str(), "w");
+    if (file != nullptr) {
+        fprintf(file, "%s %s %s", sensor_type.c_str(), name.c_str(), pass.c_str());
+        fclose(file);
     }
     Sensor sensor((uint16_t)port, id, sensor_type, name, pass);
     sensor.run();
