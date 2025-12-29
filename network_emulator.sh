@@ -90,11 +90,10 @@ for i in $(seq 1 $COUNT); do
     ip link set veth${i}-br up
 
     # chạy chương trình sensor
-    sensor_port=$((PORT + i - 1))
     if [ "$BACKGROUND" == "true" ]; then
-        ip netns exec $ns ./sensorserver/sensor $sensor_port &
+        ip netns exec $ns ./sensor $PORT $i Sensor${i} password${i} &
     else
-        gnome-terminal --title="Sensor $ns ($ipaddr:$sensor_port)" -- bash -c "ip netns exec $ns ./sensorserver/sensor $sensor_port; exec bash" &
+        gnome-terminal --title="Sensor $ns ($ipaddr:$PORT)" -- bash -c "ip netns exec $ns ./sensor $PORT $i Sensor${i} password${i}; exec bash" &
     fi
 done
 

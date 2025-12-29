@@ -73,10 +73,31 @@ public:
     void client_session(ClientInfo* info)
     {
         int clientfd = info->clientfd;
+        // determine peer IP for logging
+        struct sockaddr_in peer_addr;
+        socklen_t peer_len = sizeof(peer_addr);
+        char peer_ip[INET_ADDRSTRLEN] = "unknown";
+        if (getpeername(clientfd, (struct sockaddr*)&peer_addr, &peer_len) == 0) {
+            inet_ntop(AF_INET, &peer_addr.sin_addr, peer_ip, sizeof(peer_ip));
+        }
+
         string buf, cmd;
         string response;
         string token, inp_token;
         bool authenticated = false;
+
+        // helper: generate random sensor stats (3 values)
+        auto generate_random_stats = [&]() -> string {
+            random_device rd;
+            mt19937 gen(rd());
+            uniform_real_distribution<> dist(0.0, 100.0);
+            double a = dist(gen);
+            double b = dist(gen);
+            double c = dist(gen);
+            std::ostringstream oss;
+            oss << fixed << setprecision(2) << a << "," << b << "," << c;
+            return oss.str();
+        };
         while (1)
         {
             ssize_t m = recv_message(clientfd, buf);
@@ -85,9 +106,11 @@ public:
             stringstream ss(buf);
             ss >> cmd;
             if (cmd == "1") {
+                cout << "Received scan request from client " << peer_ip << endl;
                 response = "100 " + id + " " + name + " " + sensor_type;
                 send_message(clientfd, response);
             } else if (cmd == "2") {
+                cout << "Received connect request from client " << peer_ip << endl;
                 int app_id_parsed;
                 string inp_pass;
                 if (!(ss >> app_id_parsed >> inp_pass))
@@ -96,6 +119,7 @@ public:
                     send_message(clientfd, response);
                     continue;
                 }
+                cout << "  app_id=" << app_id_parsed << " password=<redacted>" << endl;
                 if (info->app_id == app_id_parsed)
                 {
                     response = "201";
@@ -116,6 +140,39 @@ public:
                     response = "202";
                     send_message(clientfd, response);
                 }
+            } else if (cmd == "3") {
+                // control commands — print in English and optionally act
+                // expected format: 3 <token> <action> [params...]
+                string in_token, action;
+                ss >> in_token >> action;
+                if (in_token != token)
+                {
+                    response = "2";
+                    send_message(clientfd, response);
+                    continue;
+                }
+                cout << "Received control request from client " << peer_ip << ": ";
+                if (action == "POWER_ON" || action == "POWER_OFF" || action == "0" || action == "1") {
+                    string state = (action == "POWER_ON" || action == "0") ? "ON" : "OFF";
+                    cout << "power control -> set state to " << state << endl;
+                } else if (action == "TIMER") {
+                    string state; int minutes;
+                    ss >> state >> minutes;
+                    cout << "timer -> state=" << state << " minutes=" << minutes << endl;
+                } else if (action == "CANCEL") {
+                    cout << "cancel control request" << endl;
+                } else {
+                    // other possible control forms: numeric params
+                    vector<string> rest;
+                    string tokenp;
+                    while (ss >> tokenp) rest.push_back(tokenp);
+                    cout << "action=" << action << " params:";
+                    for (auto &r: rest) cout << " " << r;
+                    cout << endl;
+                }
+                // reply OK (generic)
+                response = "300";
+                send_message(clientfd, response);
             } else if (cmd == "4") {
                 string old_pass, new_pass;
                 if (!(ss >> inp_token >> old_pass >> new_pass))

@@ -17,6 +17,7 @@ void call_api(int sockfd, string request, void* output) {
         cout << "Failed to receive message from device." << endl;
         return;
     }
+    cout << "Response from device: " << response << endl;
     handle_response(response, output);
 }
 
@@ -33,11 +34,15 @@ void handle_response(std::string response, void* output) {
     string item;
 
     switch (stoi(status_code)) {
-        case 200:
+        case 200: {
             ss >> data;
             cout << "Device token: " << data << endl;
-            output = (void*)data.c_str();
+            if (output) {
+                std::string* out_str = static_cast<std::string*>(output);
+                *out_str = data;
+            }
             break;
+        }
         case 310:
             ss >> power_data >> data;
             cout << "Power state changed to " << (data == "1" ? "ON" : "OFF") << endl;

@@ -11,9 +11,8 @@
 #include <sstream>
 
 // Hàm xử lý lệnh nhập vào, tách từng lệnh và gọi module tương ứng
-void handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
+bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
     Device* selected_device = nullptr;
-    system("clear");
     cout << "===============================" << endl;
     cout << "Available commands:" << endl;
     cout << " 1. SCAN                        - Scan for devices" << endl;
@@ -70,7 +69,34 @@ void handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
         else
             change_param(devices[idx], param, value);
     }
-    else if (cmd == "7") return;
+    else if (cmd == "7") return false;
+    else if (cmd == "8")
+    {
+        cout << "Command Help:" << endl;
+        cout << " 1. SCAN" << endl;
+        cout << "    Scan for devices on the local network." << endl;
+        cout << " 2. CONNECT <id> <password>" << endl;
+        cout << "    Connect to device with <id> using <password>." << endl;
+        cout << " 3. CONTROL DEVICE" << endl;
+        cout << "    Take control of a device." << endl;
+        cout << " 4. CHANGE_PW <id> <current_pw> <new_pw>" << endl;
+        cout << "    Change password for device with <id>." << endl;
+        cout << " 5. QUERY" << endl;
+        cout << "    Query device for status, sensor data, usage, config or all." << endl;
+        cout << " 6. CONFIG <id> <param> <value>" << endl;
+        cout << "    Change configuration parameter for device with <id>." << endl;
+        cout << " 7. EXIT" << endl;
+        cout << "    Exit the application." << endl;
+        cout << " 8. HELP" << endl;
+        cout << "    Show help for commands." << endl;
+    }
     else
         cout << to_string(ERROR_UNKNOWN_COMMAND) << " Uknown command" << endl;
+    cout << "Enter to continue...";
+    {
+        std::string _tmp;
+        std::getline(cin, _tmp);
+    }
+    system("clear");
+    return true;
 }

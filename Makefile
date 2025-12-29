@@ -13,8 +13,8 @@ SENSORSERVER_SRCS := $(wildcard sensorserver/*.cpp)
 TEST_SRCS := tests/test_sensor.cpp tests/test_sensor_client.cpp tests/testEmulatorSensor.cpp tests/testEmulator.cpp
 
 # Targets
-APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS) $(SENSORSERVER_SRCS)
-SENSOR_SRCS := sensorserver/sensor.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(SENSORSERVER_SRCS)
+APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
+SENSOR_SRCS := sensorserver/sensor.cpp $(COMMON_SRCS) $(DEPS_SRCS)
 
 APP_OBJS := $(APP_SRCS:.cpp=.o)
 SENSOR_OBJS := $(SENSOR_SRCS:.cpp=.o)

@@ -14,9 +14,8 @@ int main(int argc, char** argv)
     uint16_t port = (uint16_t)inp_port;
     vector<DeviceInfo> device_list;
     vector<Device*> devices;
-    while (1)
-    {
-        handleCommand(devices, port, app_id);
+    while (handleCommand(devices, port, app_id)) {
+        // Loop until user decides to exit
     }
 
     for (auto* dev : devices)
