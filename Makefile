@@ -1,12 +1,12 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -pthread
+CXXFLAGS := -std=c++11 -Wall -Wextra -pthread
 INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver -Itests
 
 # Source groups
 COMMON_SRCS := $(wildcard common/*.cpp)
 DEPS_SRCS := $(wildcard dependencies/*.cpp)
 HANDLER_SRCS := $(wildcard handler/*.cpp)
-ROOT_SRCS := app.cpp sensor.cpp
+ROOT_SRCS := app.cpp
 SENSORSERVER_SRCS := $(wildcard sensorserver/*.cpp)
 
 # Test sources
@@ -14,7 +14,7 @@ TEST_SRCS := tests/test_sensor.cpp tests/test_sensor_client.cpp tests/testEmulat
 
 # Targets
 APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS) $(SENSORSERVER_SRCS)
-SENSOR_SRCS := sensor.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(SENSORSERVER_SRCS)
+SENSOR_SRCS := sensorserver/sensor.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(SENSORSERVER_SRCS)
 
 APP_OBJS := $(APP_SRCS:.cpp=.o)
 SENSOR_OBJS := $(SENSOR_SRCS:.cpp=.o)
