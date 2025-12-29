@@ -92,9 +92,9 @@ for i in $(seq 1 $COUNT); do
     # chạy chương trình sensor
     sensor_port=$((PORT + i - 1))
     if [ "$BACKGROUND" == "true" ]; then
-        ip netns exec $ns ./sensor $sensor_port &
+        ip netns exec $ns ./sensorserver/sensor $sensor_port &
     else
-        gnome-terminal --title="Sensor $ns ($ipaddr:$sensor_port)" -- bash -c "ip netns exec $ns ./sensor $sensor_port; exec bash" &
+        gnome-terminal --title="Sensor $ns ($ipaddr:$sensor_port)" -- bash -c "ip netns exec $ns ./sensorserver/sensor $sensor_port; exec bash" &
     fi
 done
 
