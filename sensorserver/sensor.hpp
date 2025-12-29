@@ -70,6 +70,42 @@ public:
         return NULL;
     }
 
+    void handle_control_commands(int clientfd, const string& token, const string& peer_ip, stringstream& ss, string& response)
+    {
+        // control commands — print in English and optionally act
+                // expected format: 3 <token> <action> [params...]
+                string in_token, action;
+                ss >> in_token >> action;
+                if (in_token != token)
+                {
+                    response = "2";
+                    send_message(clientfd, response);
+                    return;
+                }
+                cout << "Received control request from client " << peer_ip << ": ";
+                if (action == "POWER_ON" || action == "POWER_OFF" || action == "0" || action == "1") {
+                    string state = (action == "POWER_ON" || action == "0") ? "ON" : "OFF";
+                    cout << "power control -> set state to " << state << endl;
+                } else if (action == "TIMER") {
+                    string state; int minutes;
+                    ss >> state >> minutes;
+                    cout << "timer -> state=" << state << " minutes=" << minutes << endl;
+                } else if (action == "CANCEL") {
+                    cout << "cancel control request" << endl;
+                } else {
+                    // other possible control forms: numeric params
+                    vector<string> rest;
+                    string tokenp;
+                    while (ss >> tokenp) rest.push_back(tokenp);
+                    cout << "action=" << action << " params:";
+                    for (auto &r: rest) cout << " " << r;
+                    cout << endl;
+                }
+                // reply OK (generic)
+                response = "300";
+                send_message(clientfd, response);
+    }
+
     void client_session(ClientInfo* info)
     {
         int clientfd = info->clientfd;
@@ -141,38 +177,7 @@ public:
                     send_message(clientfd, response);
                 }
             } else if (cmd == "3") {
-                // control commands — print in English and optionally act
-                // expected format: 3 <token> <action> [params...]
-                string in_token, action;
-                ss >> in_token >> action;
-                if (in_token != token)
-                {
-                    response = "2";
-                    send_message(clientfd, response);
-                    continue;
-                }
-                cout << "Received control request from client " << peer_ip << ": ";
-                if (action == "POWER_ON" || action == "POWER_OFF" || action == "0" || action == "1") {
-                    string state = (action == "POWER_ON" || action == "0") ? "ON" : "OFF";
-                    cout << "power control -> set state to " << state << endl;
-                } else if (action == "TIMER") {
-                    string state; int minutes;
-                    ss >> state >> minutes;
-                    cout << "timer -> state=" << state << " minutes=" << minutes << endl;
-                } else if (action == "CANCEL") {
-                    cout << "cancel control request" << endl;
-                } else {
-                    // other possible control forms: numeric params
-                    vector<string> rest;
-                    string tokenp;
-                    while (ss >> tokenp) rest.push_back(tokenp);
-                    cout << "action=" << action << " params:";
-                    for (auto &r: rest) cout << " " << r;
-                    cout << endl;
-                }
-                // reply OK (generic)
-                response = "300";
-                send_message(clientfd, response);
+                handle_control_commands(clientfd, token, peer_ip, ss, response);
             } else if (cmd == "4") {
                 string old_pass, new_pass;
                 if (!(ss >> inp_token >> old_pass >> new_pass))

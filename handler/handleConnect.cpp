@@ -13,7 +13,8 @@ void handleConnect(std::vector<Device*>& devices, int app_id) {
         if (ch == 'y' || ch == 'Y') {
             selected_device->info.token.clear();
             cout << " Device disconnected." << endl;
-        return;
+            return;
+        }
     }
     cout << "Enter password to connect: ";
     string password;
