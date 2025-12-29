@@ -18,24 +18,27 @@ public:
     string name;
     string pass;
 
-    // Trạng thái của sensor
-    bool powered_on = false;
-    bool timer_set_to = false;
-    time_t timer_time = 0;
-    string current_action = "NONE";
-
-    float T = 0;
+    SensorDataStructure data;
 
     // per-client sockets are handled in threads; no global userfd/connected
     Identity* tcpid = nullptr;
 
-    Sensor(uint16_t port, const string& sensor_id, const string& sensor_name, const string& sensor_pass)
+    Sensor(uint16_t port, const string& sensor_id, string sensor_type, const string& sensor_name, const string& sensor_pass)
     {
         id = sensor_id;
         name = sensor_name;
         pass = sensor_pass;
         tcpid = create_identity(port, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, INADDR_ANY);
-        sensor_type = "SENSOR";
+        this->sensor_type = sensor_type;
+        switch (sensor_type)
+        {
+        case "sprinkler":
+            data = SprinklerDataStructure(id);
+            break;
+        default:
+            data = SensorDataStructure();
+            break;
+        }
     }
 
     // Generate a token derived from sensor name and random entropy
@@ -109,21 +112,13 @@ public:
                 continue;
             } 
             if (cmd == "3") {
-                handle_control(peer_ip, &powered_on, &timer_set_to, &timer_time, &current_action, clientfd, ss);
+                handle_control(peer_ip, data, clientfd, ss);
             } else if (cmd == "4") {
-                string old_pass, new_pass;
-                if (!(ss >> inp_token >> old_pass >> new_pass))
-                {
-                    response = "3";
-                    send_message(clientfd, response);
+                if (!read_from_ss(ss, params, 2)) {
                     continue;
                 }
-                if (inp_token != token)
-                {
-                    response = "2";
-                    send_message(clientfd, response);
-                    continue;
-                }
+                string old_pass = params[0];
+                string new_pass = params[1];
                 if (old_pass != pass)
                 {
                     response = "401";

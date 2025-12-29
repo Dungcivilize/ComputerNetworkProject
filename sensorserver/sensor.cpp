@@ -6,16 +6,42 @@
 
 int main(int argc, char* argv[])
 {
-    if (argc < 5) {
-        std::cout << "Usage: test_sensor [PORT] [SENSOR_ID] [NAME] [PASSWORD]" << std::endl;
+    if (argc < 3) {
+        std::cout << "Usage: sensor [PORT] [SENSOR_ID] [[SENSOR_TYPE] [SENSOR_NAME] [SENSOR_PASS]]" << std::endl;
         return 1;
     }
     int port = atoi(argv[1]);
     std::string id = argv[2];
-    std::string name = argv[3];
-    std::string pass = argv[4];
+    std::string sensor_type;
+    std::string name;
+    std::string pass;
+    if (argc < 6) {
+        FILE *file = fopen("sensor_config" + id + ".txt", "r");
+        if (file == nullptr) {
+            if (argc < 4)
+            {
+                std::cout << "Usage: sensor [PORT] [SENSOR_ID] [SENSOR_TYPE] [[SENSOR_NAME] [SENSOR_PASS]] to create new sensor" << std::endl;
+                return 1;
+            }
+            sensor_type = argv[3];
+            name = (argc >= 5) ? argv[4] : "Sensor_" + id;
+            pass = (argc >= 6) ? argv[5] : "";
 
-    Sensor sensor((uint16_t)port, id, name, pass);
+            file = fopen("sensor_config" + id + ".txt", "w");
+            if (file != nullptr) {
+                fprintf(file, "%s %s %s\n", sensor_type.c_str(), name.c_str(), pass.c_str());
+                fclose(file);
+            }
+        } else {
+            fscanf(file, "%s %s %s", &sensor_type[0], &name[0], &pass[0]);
+            fclose(file);
+        }
+    } else {
+        sensor_type = argv[3];
+        name = argv[4];
+        pass = argv[5];
+    }
+    Sensor sensor((uint16_t)port, id, sensor_type, name, pass);
     sensor.run();
     return 0;
 }

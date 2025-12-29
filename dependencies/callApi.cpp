@@ -54,12 +54,12 @@ void handle_response(std::string response, void* output) {
         case 310:
             ss >> power_data >> data;
             cout << "Power state changed to " << (data == "1" ? "ON" : "OFF") << endl;
-            cout << "Power consumption: " << power_data << " Watts" << endl;
+            cout << "Power: " << power_data << " Watts" << endl;
             break;
         case 320:
             ss >> power_data >> data;
             cout << "Watering amount: " << data << " Liters" << endl;
-            cout << "Power consumption: " << power_data << " Watts" << endl;
+            cout << "Power: " << power_data << " Watts" << endl;
             break;
         case 330:               
             ss >> power_data;
@@ -93,6 +93,11 @@ void handle_response(std::string response, void* output) {
             strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", localtime(&action_time));
             cout << "Action scheduled at: " << time_str << endl;
             cout << "Power consumption: (expected) " << power_data << " Watts" << endl;
+            break;
+        }
+        case 360: {
+            ss >> data;
+            cout << "Cancelled action: " << data << endl;
             break;
         }
         case 500:

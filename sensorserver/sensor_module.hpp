@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "../dependencies/index.hpp"
+#include "sensorDataStructure.hpp"
 
 bool requires_authentication(std::string token, stringstream& ss) {
     string inp_token;
@@ -30,10 +31,17 @@ bool read_from_ss(stringstream& ss, std::vector<std::string>& out, int count, st
 
 void handle_control_commands(int clientfd, stringstream& ss, string type = "sensor")
 {
-    if (type == "sensor") {
+    switch (type)
+    {
+    case "sprinkler":
+        ss >> volume;
+        break;
+    default:
         // reply OK (generic)
         response = "300";
         send_message(clientfd, response);
+        break;
+        
     }
 }
 
@@ -67,7 +75,7 @@ void handle_connect(string peer_ip, ClientInfo* info, stringstream& ss) {
         send_message(clientfd, response);
     }
 }
-void handle_control(string peer_ip, bool* powered_on, bool* timer_set_to, time_t* timer_time, string* current_action, int clientfd, stringstream& ss) {
+void handle_control(string peer_ip, SensorDataStructure data, int clientfd, stringstream& ss) {
     if (!(read_from_ss(ss, params, 1))) {
         continue;
     }
@@ -76,17 +84,19 @@ void handle_control(string peer_ip, bool* powered_on, bool* timer_set_to, time_t
     if (action == "POWER_ON" || action == "POWER_OFF" || action == "0" || action == "1") {
         string state = (action == "POWER_ON" || action == "1") ? "ON" : "OFF";
         cout << "power control -> set state to " << state << endl;
-        if (*powered_on == true && state == "ON") {
+        if (data.powered_on == true && state == "ON") {
             response = "311";
             send_message(clientfd, response);
             continue;
         }
-        if (*powered_on == false && state == "OFF") {
+        if (data.powered_on == false && state == "OFF") {
             response = "312";
             send_message(clientfd, response);
             continue;
         } 
-        *powered_on = (state == "ON");
+        data.powered_on = (state == "ON");
+        response = "310 " + to_string(data.calculate_power()) + " " + (data.powered_on ? "1" : "0");
+        send_message(clientfd, response);
     } else if (action == "TIMER" || action == "2") {
         if (!read_from_ss(ss, params, 2)) {
             continue;
@@ -108,18 +118,18 @@ void handle_control(string peer_ip, bool* powered_on, bool* timer_set_to, time_t
         }
         // Nếu current_time nhỏ hơn thời gian đã đặt thì báo đã đặt hẹn giờ
         time_t current_time = time(nullptr);
-        if (*timer_time > current_time) {
+        if (data.timer_time > current_time) {
             response = "351";
             send_message(clientfd, response);
             continue;
         }
         // Nếu trạng thái hẹn giờ trùng với trạng thái hiện tại thì báo lỗi
-        if (*powered_on == true && state == "1") {
+        if (data.powered_on == true && state == "1") {
             response = "352";
             send_message(clientfd, response);
             continue;
         }
-        if (*powered_on == false && state == "0") {
+        if (data.powered_on == false && state == "0") {
             response = "353";
             send_message(clientfd, response);
             continue;
@@ -127,13 +137,22 @@ void handle_control(string peer_ip, bool* powered_on, bool* timer_set_to, time_t
         
         // Tính thời điểm thực hiện hành động
         time_t action_time = current_time + minutes * 60;
-        *timer_set_to = (state == "1");
-        *timer_time = action_time;
-        *current_action = "TIMER";
-        cout << "timer control -> set to " << (*timer_set_to ? "ON" : "OFF") << " in " << minutes << " minutes" << endl;
+        data.timer_set_to = (state == "1");
+        data.timer_time = action_time;
+        data.current_action = "TIMER";
+        cout << "timer control -> set to " << (data.timer_set_to ? "ON" : "OFF") << " in " << minutes << " minutes" << endl;
+        response = "320 " + to_string(data.calculate_power()) + " " + to_string(minutes);
+        send_message(clientfd, response);
     } else if (action == "CANCEL" || action == "3") {
-        *current_action = "NONE";
+        if (data.current_action == "NONE") {
+            response = "361";
+            send_message(clientfd, response);
+            continue;
+        }
         cout << "cancel control request" << endl;
+        response = "360 " + data.current_action;
+        send_message(clientfd, response);
+        data.current_action = "NONE";
     } else {
         handle_control_commands(clientfd, ss);
     }
