@@ -28,7 +28,7 @@ Device* listDeviceToSelect(vector<Device*>& devices, bool accept_disconnected) {
     cout << "Available devices:" << endl;
     for (size_t i = 0; i < devices.size(); ++i) {
         DeviceInfo info = devices[i]->info;
-        cout << i << ". " << info.id << ": " << info.name << " (" << info.addr_str << ")" << (info.token.empty() ? " [Not Connected]" : "[Connected]") << endl;
+        cout << i << ". ID: " << info.id << ", Name: " << info.name << " (" << info.addr_str << ")" << (info.token.empty() ? " [Not Connected]" : "[Connected]") << endl;
     }
     cout << "Select device index (-1 to cancel): ";
     int index;

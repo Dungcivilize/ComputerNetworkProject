@@ -123,10 +123,9 @@ void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, str
         if (!read_from_ss(ss, clientfd, params, 2)) {
             return;
         }
-        string state;
-        int minutes;
-        state = params[0];
-        minutes = stoi(params[1]);
+        string state = params[0];
+        int minutes = stoi(params[1]);
+
         // Kiểm tra dữ liệu hợp lệ
         if (state != "0" && state != "1") {
             response = "3";
@@ -140,7 +139,7 @@ void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, str
         }
         // Nếu current_time nhỏ hơn thời gian đã đặt thì báo đã đặt hẹn giờ
         time_t current_time = time(nullptr);
-        if (data.timer_time > current_time) {
+        if (data.timer_time > current_time && data.current_action == "TIMER") {
             response = "351";
             send_message(clientfd, response);
             return;
