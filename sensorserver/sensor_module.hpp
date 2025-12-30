@@ -95,7 +95,7 @@ void handle_connect(string peer_ip, ClientInfo* info, stringstream& ss, string p
         send_message(info->clientfd, response);
     }
 }
-void handle_control(string peer_ip, SensorDataStructure data, int clientfd, stringstream& ss) {
+void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, stringstream& ss) {
     vector<string> params;
     string response;
     if (!(read_from_ss(ss, clientfd, params, 1))) {
