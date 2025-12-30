@@ -163,7 +163,7 @@ void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, str
         data.timer_time = action_time;
         data.current_action = "TIMER";
         cout << "timer control -> set to " << (data.timer_set_to ? "ON" : "OFF") << " in " << minutes << " minutes" << endl;
-        response = "320 " + to_string(data.calculate_power()) + " " + to_string(minutes);
+        response = "350 " + to_string(data.calculate_power()) + " " + to_string(minutes);
         send_message(clientfd, response);
     } else if (action == "CANCEL" || action == "4") {
         if (data.current_action == "NONE") {
