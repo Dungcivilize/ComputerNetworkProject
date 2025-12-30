@@ -2,7 +2,7 @@
 
 void power_control(Device* selected_device)
 {
-    cout << "Enter power state (0 for ON, 1 for OFF): ";
+    cout << "Enter power state (1 for ON, 0 for OFF): ";
     int state;
     cin >> state;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -10,7 +10,7 @@ void power_control(Device* selected_device)
         cout << " Invalid power state." << endl;
         return;
     }
-    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + (state==0 ? "POWER_ON" : "POWER_OFF"));
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(state));
 }
 
 void take_control(Device* selected_device)
@@ -87,7 +87,7 @@ void take_control(Device* selected_device)
 
 void set_timer(Device* selected_device)
 {
-    cout << "Enter state (0 to ON, 1 to OFF, -1 to cancel): ";
+    cout << "Enter state (1 for ON, 0 for OFF, -1 to cancel): ";
     int state;
     cin >> state;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -106,12 +106,12 @@ void set_timer(Device* selected_device)
         cout << "Timer setting cancelled." << endl;
         return;
     }
-    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " TIMER " + to_string(state) + " " + to_string(minutes));
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 3 " + to_string(state) + " " + to_string(minutes));
 }   
 
 void cancel_control(Device* selected_device)
 {
-    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " CANCEL");
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 4");
 }
 
 void handleControl(std::vector<Device*>& devices)

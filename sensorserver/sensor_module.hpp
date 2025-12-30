@@ -119,7 +119,7 @@ void handle_control(string peer_ip, SensorDataStructure data, int clientfd, stri
         data.powered_on = (state == "ON");
         response = "310 " + to_string(data.calculate_power()) + " " + (data.powered_on ? "1" : "0");
         send_message(clientfd, response);
-    } else if (action == "TIMER" || action == "2") {
+    } else if (action == "TIMER" || action == "3") {
         if (!read_from_ss(ss, clientfd, params, 2)) {
             return;
         }
@@ -165,7 +165,7 @@ void handle_control(string peer_ip, SensorDataStructure data, int clientfd, stri
         cout << "timer control -> set to " << (data.timer_set_to ? "ON" : "OFF") << " in " << minutes << " minutes" << endl;
         response = "320 " + to_string(data.calculate_power()) + " " + to_string(minutes);
         send_message(clientfd, response);
-    } else if (action == "CANCEL" || action == "3") {
+    } else if (action == "CANCEL" || action == "4") {
         if (data.current_action == "NONE") {
             response = "361";
             send_message(clientfd, response);
