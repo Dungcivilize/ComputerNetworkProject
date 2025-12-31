@@ -16,18 +16,12 @@ static bool power(Device& device, const string& mode, string& resp, int& exec_co
     return true;
 }
 
-static void execute_power(vector<Device>& connected, const string& device_id, const string& mode)
+static void execute_power(Device& device, const string& mode)
 {
-    size_t index = find_by_id(connected, device_id);
-    if (index == -1)
-        cerr << "Error: You have not connected to this device yet." << endl;
+    int code = 0;
+    string resp;
+    if (power(device, mode, resp, code))
+        cout << "Set power successful. Status code: " + to_string(code) << endl;
     else
-    {
-        int code = 0;
-        string resp;
-        if (power(connected[index], mode, resp, code))
-            cout << "Set power successful. Status code: " + to_string(code) << endl;
-        else
-            cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
-    }
+        cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
 }

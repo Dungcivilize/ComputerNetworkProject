@@ -26,18 +26,12 @@ static bool config(Device& device, const string& param, int value, string& resp,
     return true;
 }
 
-static void execute_config(vector<Device>& devices, const string& id, const string& param, const int value)
+static void execute_config(Device& device, const string& param, const int value)
 {
-    ssize_t index = find_by_id(devices, id);
-    if (index == -1)
-        cerr << "Error: You have not connected to this device yet." << endl;
+    int code = 0;
+    string resp;
+    if (config(device, param, value, resp, code))
+        cout << "Config success. Status code: " + to_string(code) << endl;
     else
-    {
-        int code = 0;
-        string resp;
-        if (config(devices[index], param, value, resp, code))
-            cout << "Config success. Status code: " + to_string(code) << endl;
-        else
-            cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
-    }
+        cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
 }

@@ -14,18 +14,12 @@ static bool change_password(Device& device, const string& current_pass, const st
     return exec_code == SUCCESS_PW_CHANGE;
 }
 
-static void execute_change_password(vector<Device>& connected, const string& device_id, const string& current_pass, const string& new_pass)
+static void execute_change_password(Device& device, const string& current_pass, const string& new_pass)
 {
-    size_t index = find_by_id(connected, device_id);
-    if (index == -1)
-        cerr << "Error: You have not connected to this device yet." << endl;
+    int code = 0;
+    string resp;
+    if (change_password(device, current_pass, new_pass, resp, code))
+        cout << "Password changed. Status code: " + to_string(code) << endl;
     else
-    {
-        int code = 0;
-        string resp;
-        if (change_password(connected[index], current_pass, new_pass, resp, code))
-            cout << "Password changed. Status code: " + to_string(code) << endl;
-        else
-            cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
-    }
+        cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
 }

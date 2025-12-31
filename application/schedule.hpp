@@ -23,18 +23,12 @@ static bool schedule(Device& device, const string& scope, const string& timestam
     return true;
 }
 
-static void execute_schedule(vector<Device>& devices, const string& id, const string& scope, const string& timestamp)
+static void execute_schedule(Device& device, const string& scope, const string& timestamp)
 {
-    ssize_t index = find_by_id(devices, id);
-    if (index == -1)
-        cerr << "Error: You have not connected to this device yet." << endl;
+    int code = 0;
+    string resp;
+    if (schedule(device, scope, timestamp, resp, code))
+        cout << "Update schedule success. Status code: " + to_string(code) << endl;
     else
-    {
-        int code = 0;
-        string resp;
-        if (schedule(devices[index], scope, timestamp, resp, code))
-            cout << "Update schedule success. Status code: " + to_string(code) << endl;
-        else
-            cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
-    }
+        cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
 }

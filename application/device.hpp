@@ -56,6 +56,23 @@ struct Device
 
     string display()
     {
+        string params = display_param();
+        return "ID: " + this->id +
+        "\nType: " + this->type + 
+        "\nState: " + (this->state ? "ON" : "OFF") +
+        "\n" + params;
+    }
+
+    string display_schedule()
+    {
+        if (schedule.empty()) return "NaN";
+        string resp;
+        for (auto& timestamp : schedule) resp += timestamp + " ";
+        return "Schedule: " + resp; 
+    }
+
+    string display_param()
+    {
         string params;
         if (type == "sensor")
             params = "T: " + to_string(this->params[0]); 
@@ -78,9 +95,11 @@ struct Device
             "\nPmin: " + to_string(this->params[3]) +
             "\nKmin: " + to_string(this->params[4]);
         }
-        return "ID: " + this->id +
-        "\nType: " + this->type + 
-        "\nState: " + (this->state ? "ON" : "OFF") +
-        "\n" + params;
+        return params;
+    }
+
+    string display_state()
+    {
+        return string("State: ") + (this->state ? "ON" : "OFF");
     }
 };

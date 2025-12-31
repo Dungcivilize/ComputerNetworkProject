@@ -14,18 +14,12 @@ static bool light(Device& device, int p, int s, string& resp, int& exec_code)
     return exec_code == SUCCESS_COMMAND;
 }
 
-static void execute_light(vector<Device>& connected, const string& device_id, int p, int s)
+static void execute_light(Device& device, int p, int s)
 {
-    size_t index = find_by_id(connected, device_id);
-    if (index == -1)
-        cerr << "Error: You have not connected to this device yet." << endl;
+    int code = 0;
+    string resp;
+    if (light(device, p, s, resp, code))
+        cout << resp + ". Status code: " + to_string(code) << endl;
     else
-    {
-        int code = 0;
-        string resp;
-        if (light(connected[index], p, s, resp, code))
-            cout << resp + ". Status code: " + to_string(code) << endl;
-        else
-            cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
-    }
+        cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
 }

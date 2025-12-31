@@ -43,8 +43,8 @@ int main(int argc, char* argv[])
         return 1;
     }
     
-    pthread_t background1;
-    if (pthread_create(&background1, nullptr, work1_thread, NULL) != 0)
+    pthread_t background;
+    if (pthread_create(&background, nullptr, work_thread, NULL) != 0)
     {
         perror("pthread_create");
         close(server_fd);

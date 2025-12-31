@@ -20,25 +20,80 @@ void work(int v)
     logging("log/activity.txt", string("V=" + to_string(v)));
 }
 
-void work2()
+double sample_humidity() { return randnumbers(1, 0, 100)[0]; }
+
+static time_t midnight_time(time_t t)
 {
-    double H = randnumbers(1, 0, 100)[0];
-    cout << "SYS: H=" + to_string(H) << endl;
-    if (H < Hmin)
-        cout << "SYS: Watering with V=" + to_string(V) << endl;
-    logging("log/activity.txt", string("H=" + to_string(H) + " Watering=" + (H < Hmin ? "True" : "False") + " V=" + to_string(V)));
+    struct tm tm_time;
+    localtime_r(&t, &tm_time);
+    tm_time.tm_hour = 0;
+    tm_time.tm_min = 0;
+    tm_time.tm_sec = 0;
+    tm_time.tm_isdst = -1;
+    return mktime(&tm_time);
 }
 
-void* work2_thread(void* arg)
+static int count_schedule_crosses(const vector<string>& schedule, time_t prev_time, time_t now_time)
+{
+    if (schedule.empty() || prev_time <= 0 || now_time <= prev_time) return 0;
+
+    int count = 0;
+    time_t day = midnight_time(prev_time);
+    time_t end_day = midnight_time(now_time);
+
+    while (day <= end_day)
+    {
+        struct tm day_tm;
+        localtime_r(&day, &day_tm);
+
+        for (const auto& timestamp : schedule)
+        {
+            int h, m, s;
+            if (sscanf(timestamp.c_str(), "%d:%d:%d", &h, &m, &s) != 3) continue;
+
+            struct tm target_tm = day_tm;
+            target_tm.tm_hour = h;
+            target_tm.tm_min = m;
+            target_tm.tm_sec = s;
+            target_tm.tm_isdst = -1;
+
+            time_t candidate = mktime(&target_tm);
+            if (candidate > prev_time && candidate <= now_time) count++;
+        }
+
+        struct tm next_tm = day_tm;
+        next_tm.tm_mday += 1;
+        next_tm.tm_hour = 0;
+        next_tm.tm_min = 0;
+        next_tm.tm_sec = 0;
+        next_tm.tm_isdst = -1;
+        time_t next_day = mktime(&next_tm);
+        if (next_day <= day) break;
+        day = next_day;
+    }
+
+    return count;
+}
+
+void* work_thread(void* arg)
 {
     (void)arg;
+    time_t last_sample = 0;
     pthread_mutex_lock(&m);
     while (true)
     {
         while (!power)
+        {
             pthread_cond_wait(&cnd, &m);
+            last_sample = 0;
+        }
 
-        cout << "Thread2 time calc" << endl;
+        if (last_sample == 0)
+        {
+            timespec now_ts;
+            clock_gettime(CLOCK_REALTIME, &now_ts);
+            last_sample = now_ts.tv_sec;
+        }
 
         timespec t;
         clock_gettime(CLOCK_REALTIME, &t);
@@ -47,83 +102,28 @@ void* work2_thread(void* arg)
         int rc = pthread_cond_timedwait(&cnd, &m, &t);
         if (!power || (rc == 0)) continue;
 
-        pthread_mutex_unlock(&m);
-        work2();
-        pthread_mutex_lock(&m);
-    }
-    return nullptr;
-}
-
-void work1()
-{
-    double H = randnumbers(1, 0, 100)[0];
-    cout << "SYS: H=" + to_string(H) << endl;
-    if (H < Hmax)
-        cout << "SYS: Watering with V=" + to_string(V) << endl;
-    logging("log/activity.txt", string("H=" + to_string(H) + " Watering=" + (H < Hmax ? "True" : "False") + " V=" + to_string(V)));
-}
-
-void* work1_thread(void* arg)
-{
-    (void)arg;
-    time_t last_trigger = 0;
-    pthread_mutex_lock(&m);
-    while (true)
-    {
-        while (!power || schedule.empty())
-            pthread_cond_wait(&cnd, &m);
-
-        cout << "Thread1 time calc" << endl;
-
         timespec now_ts;
         clock_gettime(CLOCK_REALTIME, &now_ts);
+        time_t now_time = now_ts.tv_sec;
+        int local_Hmin = Hmin;
+        int local_Hmax = Hmax;
+        int local_V = V;
+        vector<string> local_schedule = schedule;
 
-        struct tm tm_now;
-        localtime_r(&now_ts.tv_sec, &tm_now);
+        pthread_mutex_unlock(&m);
 
-        time_t next_trigger = 0;
-        bool found = false;
-        for (const auto& timestamp : schedule)
+        double H = sample_humidity();
+        if (H < local_Hmin) work(local_V);
+
+        int crossed = count_schedule_crosses(local_schedule, last_sample, now_time);
+        if (H < local_Hmax)
         {
-            int h, m, s;
-            if (sscanf(timestamp.c_str(), "%d:%d:%d", &h, &m, &s) != 3) continue;
-
-            struct tm tm_target = tm_now;
-            tm_target.tm_hour = h;
-            tm_target.tm_min = m;
-            tm_target.tm_sec = s;
-            tm_target.tm_isdst = -1;
-
-            time_t candidate = mktime(&tm_target);
-            if (candidate < now_ts.tv_sec || (candidate == now_ts.tv_sec && now_ts.tv_nsec > 0))
-                candidate += 24 * 60 * 60;
-            if (candidate == last_trigger) candidate += 24 * 60 * 60;
-
-            if (!found || candidate < next_trigger)
-            {
-                next_trigger = candidate;
-                found = true;
-            }
+            for (int i = 0; i < crossed; i++)
+                work(local_V);
         }
 
-        if (!found)
-        {
-            pthread_cond_wait(&cnd, &m);
-            continue;
-        }
+        last_sample = now_time;
 
-        timespec t;
-        t.tv_sec = next_trigger;
-        t.tv_nsec = 0;
-        int rc = pthread_cond_timedwait(&cnd, &m, &t);
-        if (!power || schedule.empty()) continue;
-        if (rc == ETIMEDOUT)
-        {
-            last_trigger = next_trigger;
-            pthread_mutex_unlock(&m);
-            work1();
-            pthread_mutex_lock(&m);
-        }
+        pthread_mutex_lock(&m);
     }
-    return nullptr;
 }

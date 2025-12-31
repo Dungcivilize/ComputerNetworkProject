@@ -25,7 +25,7 @@ static bool query(Device& device, const string& scope, string& resp, int& exec_c
     }
     else if (scope == "SCHEDULE" && tokens[0] != "NaN")
         device.schedule = tokens;
-    else
+    else if (scope == "ALL")
     {
         device.state = stoi(tokens[0]);
         int nparams = 0;
@@ -46,6 +46,29 @@ static bool query(Device& device, const string& scope, string& resp, int& exec_c
         }
     }
     return true;
+}
+
+static void execute_query(Device& device, const string& scope)
+{
+    int code = 0;
+    string resp;
+    if (!query(device, scope, resp, code))
+        cerr << "Error: " + resp + ". Status code: " + to_string(code) << endl;
+    else
+    {
+        if (scope == "STATE")
+            cout << device.display_state() << endl;
+        else if (scope == "SCHEDULE")
+            cout << device.display_schedule() << endl;
+        else if (scope == "PARAM")
+            cout << device.display_param() << endl;
+        else
+        {
+            cout << device.display_state() << endl;
+            cout << device.display_schedule() << endl;
+            cout << device.display_param() << endl;
+        }
+    }
 }
 
 static void execute_query_after_connection(vector<Device>& connected, const string& id)
