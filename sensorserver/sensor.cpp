@@ -10,6 +10,8 @@ int main(int argc, char* argv[])
         std::cout << "Usage: sensor [PORT] [SENSOR_ID] [[SENSOR_TYPE] [SENSOR_NAME] [SENSOR_PASS]]" << std::endl;
         return 1;
     }
+    // Tạo thư mục config nếu chưa tồn tại
+    system("mkdir -p config");
     int port = atoi(argv[1]);
     std::string id = argv[2];
     std::string sensor_type;

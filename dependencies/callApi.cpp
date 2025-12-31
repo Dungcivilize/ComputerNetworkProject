@@ -1,6 +1,9 @@
 #include "utils.hpp"
 #include "../dependencies/index.hpp"
+#include "../common/dataStructure.hpp"
+#include "../common/common.hpp"
 #include <iostream>
+#include "logger.hpp"
 
 using namespace std;    
 
@@ -9,15 +12,18 @@ std::string get_status_message(int status_code);
 
 void call_api(int sockfd, string request, void* output) {
     std::string response;
+    log("Sending request: \"" + request + "\" to socket fd: " + std::to_string(sockfd));
     if (send_message(sockfd, request) <= 0) {
         cout << "Failed to send message to device." << endl;
+        log("Error sending request \"" + request + "\" to socket fd: " + std::to_string(sockfd));
         return;
     }
     if (recv_message(sockfd, response) <= 0) {
         cout << "Failed to receive message from device." << endl;
+        log("Error receiving message of request \"" + request + "\" from socket fd: " + std::to_string(sockfd));
         return;
     }
-    cout << "Response from device: " << response << endl;
+    log("Received response: " + response);
     handle_response(response, output);
 }
 
@@ -72,11 +78,12 @@ void handle_response(std::string response, void* output) {
             cout << "Fertilizing amount: " << endl;
             data_ss.clear();
             data_ss.str(data);
-            while (getline(data_ss, item, '|')) {
-                if (!item.empty()) {
-                    cout << "-  " << item << endl;
-                }
-            }
+            float cn, cp, ck, volume;
+            data_ss >> volume >> cn >> cp >> ck;
+            cout << "  Water: " << volume << " Liters" << endl;
+            cout << "  Nitrogen: " << cn << " ppm" << endl;
+            cout << "  Phosphorus: " << cp << " ppm" << endl;
+            cout << "  Potassium: " << ck << " ppm" << endl;
             cout << "Power consumption: " << power_data << " Watts" << endl;
             break;
         case 340:    {
@@ -105,36 +112,108 @@ void handle_response(std::string response, void* output) {
             cout << "Cancelled action: " << data << endl;
             break;
         }
-        case 500:
+        case 500: {
             cout << "Device Data:" << endl;
-            data_ss.clear();
-            data_ss.str(data);
-            while (getline(data_ss, item, ';')) {
-                if (!item.empty()) {
-                    cout << "- " << item << endl;
+            // Chuyển output thành enum 
+            DeviceType* device_type = static_cast<DeviceType*>(output);
+            bool is_running_on_command;
+            ss >> is_running_on_command;
+            vector<string> params;
+            switch (*device_type) {
+                case SPRINKLER: {
+                    for (int i = 0; i < 10; ++i) {
+                        ss >> item;
+                        params.push_back(item);
+                    }
+                    int volume_per_minute = stoi(params[0]);
+                    float humidity = stof(params[1]);
+                    float min_humidity = stof(params[2]);
+                    float max_humidity = stof(params[3]);
+                    string watering_start_time = convert_time_t_to_string_only_time(stol(params[4]));
+                    string watering_end_time = convert_time_t_to_string_only_time(stol(params[5]));
+                    int current_water_amount = stoi(params[6]);
+                    int tank_capacity = stoi(params[7]);
+                    int t = stoi(params[8]);
+                    float total_energy_consumed = stof(params[9]);
+                    cout << "  Sprinkler sensor data:" << endl;
+                    cout << "  Wunning on command: " << (is_running_on_command ? "Yes" : "No") << endl;
+                    cout << "  Water Volume per Minute: " << volume_per_minute << " Liters" << endl;
+                    cout << "  Humidity: " << humidity << "%" << endl;
+                    cout << "  Min Humidity: " << min_humidity << "%" << endl;
+                    cout << "  Max Humidity: " << max_humidity << "%" << endl;
+                    cout << "  Watering Start Time: " << watering_start_time << endl;
+                    cout << "  Watering End Time: " << watering_end_time << endl;
+                    cout << "  Current Water Amount: " << current_water_amount << " Liters" << endl;
+                    cout << "  Tank Capacity: " << tank_capacity << " Liters" << endl;
+                    cout << "  Sensor refresh time: " << t << " minutes" << endl;
+                    cout << "  Total Energy Consumed: " << total_energy_consumed << " kWh" << endl;
+                    break;
                 }
+                case FERTILIZER: {
+                    for (int i = 0; i < 13; ++i) {
+                        ss >> item;
+                        params.push_back(item);
+                    }
+                    float fertilizer_amount_nitrogen_per_liter = stof(params[0]);
+                    float nitrogen_concentration = stof(params[1]);
+                    float min_nitrogen_concentration = stof(params[2]);
+                    float fertilizer_amount_phosphorus_per_liter = stof(params[3]);
+                    float phosphorus_concentration = stof(params[4]);
+                    float min_phosphorus_concentration = stof(params[5]);
+                    float fertilizer_amount_potassium_per_liter = stof(params[6]);
+                    float potassium_concentration = stof(params[7]);
+                    float min_potassium_concentration = stof(params[8]);
+                    string fertilizing_start_time = convert_time_t_to_string_only_time(stol(params[9]));
+                    string fertilizing_end_time = convert_time_t_to_string_only_time(stol(params[10]));
+                    int t = stoi(params[11]);
+                    float total_energy_consumed = stof(params[12]);
+                    cout << "  Fertilizer sensor data:" << endl;
+                    cout << "  Fertilizing on command: " << (is_running_on_command ? "Yes" : "No") << endl;
+                    cout << "  Fertilizer Amount per Liter - Nitrogen: " << fertilizer_amount_nitrogen_per_liter << " mg/L" << endl;
+                    cout << "  Nitrogen Concentration: " << nitrogen_concentration << " ppm" << endl;
+                    cout << "  Min Nitrogen Concentration: " << min_nitrogen_concentration << " ppm" << endl;
+                    cout << "  Fertilizer Amount per Liter - Phosphorus: " << fertilizer_amount_phosphorus_per_liter << " mg/L" << endl;
+                    cout << "  Phosphorus Concentration: " << phosphorus_concentration << " ppm" << endl;
+                    cout << "  Min Phosphorus Concentration: " << min_phosphorus_concentration << " ppm" << endl;
+                    cout << "  Fertilizer Amount per Liter - Potassium: " << fertilizer_amount_potassium_per_liter << " mg/L" << endl;
+                    cout << "  Potassium Concentration: " << potassium_concentration << " ppm" << endl;
+                    cout << "  Min Potassium Concentration: " << min_potassium_concentration << " ppm" << endl;
+                    cout << "  Fertilizing Start Time: " << fertilizing_start_time << endl;
+                    cout << "  Fertilizing End Time: " << fertilizing_end_time << endl;
+                    cout << "  Sensor refresh time: " << t << " minutes" << endl;
+                    cout << "  Total Energy Consumed: " << total_energy_consumed << " kWh" << endl;
+                    break;
+                }
+                case LIGHTING: {
+                    for (int i = 0; i < 5; ++i) {
+                        ss >> item;
+                        params.push_back(item);
+                    }
+                    int lightPower = stoi(params[0]);
+                    string lighting_start_time = convert_time_t_to_string_only_time(stol(params[1]));
+                    string lighting_end_time = convert_time_t_to_string_only_time(stol(params[2]));
+                    int t = stoi(params[3]);
+                    float total_energy_consumed = stof(params[4]);
+                    cout << "  Lighting sensor data:" << endl;
+                    cout << "  Lighting on command: " << (is_running_on_command ? "Yes" : "No") << endl;
+                    cout << "  Light Power: " << lightPower << " Watts" << endl;
+                    cout << "  Lighting Start Time: " << lighting_start_time << endl;
+                    cout << "  Lighting End Time: " << lighting_end_time << endl;
+                    cout << "  Sensor refresh time: " << t << " minutes" << endl;
+                    cout << "  Total Energy Consumed: " << total_energy_consumed << " kWh" << endl;
+                    break;
+                }
+                default:
+                    break;
             }
             break;
+        }
         default:
             break;
     }
 }
 
 string get_status_message(int status_code) {
-    if (status_code >= 3300 && status_code < 3399) {
-        int error_code = status_code - 3300;
-        // Chuyển về dạng nhị phân để đọc lỗi
-        bool error_flags[5] = {false};
-        for (int i = 0; i < 5; ++i) {
-            error_flags[i] = (error_code >> i) & 1;
-        }
-        cout << "Fertilizing completed with following issues:" << endl;
-        if (error_flags[0]) cout << "- Insufficient phosphorus fertilizer." << endl;
-        if (error_flags[1]) cout << "- Insufficient potassium fertilizer." << endl;
-        if (error_flags[2]) cout << "- Insufficient nitrogen fertilizer." << endl;
-        if (error_flags[3]) cout << "- Insufficient water in the tank." << endl;
-        if (error_flags[4]) cout << "- Humidity reaches its maximum threshold." << endl;
-    }
     switch (status_code) {
         case 1:
             return "Invalid parameters provided.";
@@ -174,6 +253,8 @@ string get_status_message(int status_code) {
             return "Insufficient water in the tank. Watering not started.";
         case 330:
             return "Fertilizing started successfully.";
+        case 331:
+            return "Insufficient water in the tank. Fertilizing not started.";
         case 340:
             return "Lighting started successfully.";
         case 350:
@@ -198,6 +279,10 @@ string get_status_message(int status_code) {
             return "Get device status successful.";
         case 501:
             return "Device not found.";
+        case 600:
+            return "Configuration updated successfully.";
+        case 601:
+            return "Invalid configuration parameter.";
         case 700:
             return "Device disconnected successfully.";
         case 800:

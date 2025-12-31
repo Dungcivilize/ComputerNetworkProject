@@ -50,6 +50,11 @@ fi
 host_id=0
 for i in $(seq 1 $COUNT); do
     ns="ns${i}emulator"
+    # Chọn loại sensor theo vòng (SPRINKLER, FERTILIZER, LIGHTING)
+    types=("SPRINKLER" "FERTILIZER" "LIGHTING")
+    n_types=${#types[@]}
+    idx=$(( (i - 1) % n_types ))
+    SENSOR_TYPE=${types[$idx]}
     
     # tìm IP khả dụng
     while true; do
@@ -91,9 +96,9 @@ for i in $(seq 1 $COUNT); do
 
     # chạy chương trình sensor
     if [ "$BACKGROUND" == "true" ]; then
-        ip netns exec $ns ./sensor $PORT $i SPRINKLER Sensor${i} password${i} &
+        ip netns exec $ns ./sensor $PORT $i $SENSOR_TYPE Sensor${i} password${i} &
     else
-        gnome-terminal --title="Sensor $ns ($ipaddr:$PORT)" -- bash -c "ip netns exec $ns ./sensor $PORT $i SPRINKLER Sensor${i} password${i}; exec bash" &
+        gnome-terminal --title="$SENSOR_TYPE $ns ($ipaddr:$PORT)" -- bash -c "ip netns exec $ns ./sensor $PORT $i $SENSOR_TYPE Sensor${i} password${i}; exec bash" &
     fi
 done
 

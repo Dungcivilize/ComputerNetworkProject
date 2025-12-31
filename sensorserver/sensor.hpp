@@ -10,6 +10,7 @@
 #include <cstring>
 #include <errno.h>
 #include "sensorDataStructure.hpp"
+#include "logger.hpp"
 
 // forward declare to allow ClientInfo to hold a Sensor* before Sensor is defined
 class Sensor;
@@ -19,7 +20,10 @@ class ClientInfo {
         Sensor* self;
         int clientfd;
         int app_id;
-        ClientInfo(Sensor* self, int clientfd, int app_id) : self(self), clientfd(clientfd), app_id(app_id) {}   
+        char ip_str[INET_ADDRSTRLEN];
+        ClientInfo(Sensor* self, int clientfd, int app_id, char *ip_str) : self(self), clientfd(clientfd), app_id(app_id) {
+            strncpy(this->ip_str, ip_str, INET_ADDRSTRLEN);
+        }
 };
 #include "sensor_module_fwd.hpp"
 
@@ -76,12 +80,6 @@ public:
     {
         int clientfd = info->clientfd;
         // determine peer IP for logging
-        struct sockaddr_in peer_addr;
-        socklen_t peer_len = sizeof(peer_addr);
-        char peer_ip[INET_ADDRSTRLEN] = "unknown";
-        if (getpeername(clientfd, (struct sockaddr*)&peer_addr, &peer_len) == 0) {
-            inet_ntop(AF_INET, &peer_addr.sin_addr, peer_ip, sizeof(peer_ip));
-        }
         string buf, cmd;
         vector<string> params;
         string response;
@@ -89,26 +87,28 @@ public:
         while (1)
         {
             ssize_t m = recv_message(clientfd, buf);
+            log(id, "Received message from client " + string(info->ip_str) + ": " + buf);
             if (m <= 0) break; // disconnected or error
 
             stringstream ss(buf);
             ss >> cmd;
             if (cmd == "1") {
-                cout << "Received scan request from client " << peer_ip << endl;
+                cout << "Received scan request from client " << info->ip_str << endl;
                 response = "100 " + id + " " + name + " " + sensor_type;
                 send_message(clientfd, response);
+                log(id, "Sent scan response to client " + string(info->ip_str) + ": " + response);
                 continue;
             } else if (cmd == "2") {
-                handle_connect(peer_ip, info, ss, pass, token);
+                handle_connect(info, ss, pass, token);
                 continue;
             } 
-            if (!requires_authentication(token, ss, clientfd)) {
+            if (!requires_authentication(token, ss, clientfd, id)) {
                 continue;
             } 
             if (cmd == "3") {
-                handle_control(peer_ip, data, clientfd, ss);
+                handle_control(info->ip_str, data, clientfd, ss, id);
             } else if (cmd == "4") {
-                if (!read_from_ss(ss, clientfd, params, 2)) {
+                if (!read_from_ss(ss, clientfd, params, 2, "3", id)) {
                     continue;
                 }
                 string old_pass = params[0];
@@ -117,6 +117,8 @@ public:
                 {
                     response = "401";
                     send_message(clientfd, response);
+                    log(id, "Client " + string(info->ip_str) + " provided incorrect old password for password change");
+                    continue;
                 }
                 else
                 {
@@ -124,37 +126,60 @@ public:
                     {
                         response = "402";
                         send_message(clientfd, response);
+                        log(id, "Client " + string(info->ip_str) + " attempted to change to the same password");
                         continue;
                     }
                     pass = new_pass;
                     response = "400";
                     send_message(clientfd, response);
+                    log(id, "Client " + string(info->ip_str) + " changed password successfully");
                 }
             } else if (cmd == "5") {
                 // Query data
-                cout << "Received query request from client " << peer_ip << endl;
+                cout << "Received query request from client " << info->ip_str << endl;
                 string data_str = data->toString();
                 response = "500 " + to_string(data->is_running_on_command) + " " + data_str;
                 send_message(clientfd, response);
+                log(id, "Sent query response to client " + string(info->ip_str) + ": " + response);
             } else if (cmd == "6") {
-            
+                cout << "Received configuration update request from client " << info->ip_str << endl;
+                if (!read_from_ss(ss, clientfd, params, 2, "3", id)) {
+                    continue;
+                }
+                int param_index = stoi(params[0]);
+                string config_data = params[1];
+                bool success = false;
+                success = update_sensor_configuration(data, param_index, config_data);
+                if (success) {
+                    response = "600";
+                    send_message(clientfd, response);
+                    log(id, "Client " + string(info->ip_str) + " updated configuration parameter " + to_string(param_index) + " to " + config_data);
+                } else {
+                    response = "601";
+                    send_message(clientfd, response);
+                    log(id, "Client " + string(info->ip_str) + " failed to update configuration parameter " + to_string(param_index) + " to " + config_data);
+                }
             } else if (cmd == "7") {
-                cout << "Client " << peer_ip << " disconnected." << endl;
+                cout << "Client " << info->ip_str << " disconnected." << endl;
                 info->app_id = -1;
                 send_message(clientfd, "700");
+                log(id, "Client " + string(info->ip_str) + " disconnected gracefully");
             } else if (cmd == "8") {
-                cout << "Cancel Timer request from client " << peer_ip << endl;
+                cout << "Cancel Timer request from client " << info->ip_str << endl;
                 if (!data->timer_set) {
                     response = "801";
                     send_message(clientfd, response);
+                    log(id, "Client " + string(info->ip_str) + " attempted to cancel a non-existent timer");
                     continue;
                 }
                 data->timer_set = false;
                 response = "800";
                 send_message(clientfd, response);
+                log(id, "Client " + string(info->ip_str) + " cancelled the timer successfully");
             } else {
                 response = "4";
                 send_message(clientfd, response);
+                log(id, "Client " + string(info->ip_str) + " sent unknown command: " + cmd);
             }
         }
         close(info->clientfd);
@@ -214,9 +239,11 @@ public:
                 perror("accept");
                 continue;
             }
-
+            char client_ip[INET_ADDRSTRLEN] = "unknown";
+            inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+            log(id, "Accepted connection from " + string(client_ip));
             // spawn detached thread to handle client
-            ClientInfo* info = new ClientInfo(this, clientfd, -1);  
+            ClientInfo* info = new ClientInfo(this, clientfd, -1, client_ip);
             pthread_t tid;
             if (pthread_create(&tid, NULL, Sensor::client_thread_start, info) != 0)
             {

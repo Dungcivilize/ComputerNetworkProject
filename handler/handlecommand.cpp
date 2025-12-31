@@ -14,6 +14,7 @@
 // Hàm xử lý lệnh nhập vào, tách từng lệnh và gọi module tương ứng
 bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
     Device* selected_device = nullptr;
+    system("clear");
     cout << "===============================" << endl;
     cout << "Available commands:" << endl;
     cout << " 1. SCAN                           - Scan for devices" << endl;
@@ -51,18 +52,11 @@ bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
         selected_device = listDeviceToSelect(devices);
         if (!selected_device)
             return true;
-        call_api(selected_device->sockfd, to_string(5) + " " + selected_device->info.token);
+        call_api(selected_device->sockfd, to_string(5) + " " + selected_device->info.token, &selected_device->info.type);
     }
     else if (cmd == "6")
     {
-        string id, param;
-        float value;
-        cin >> id >> param >> value;
-        ssize_t idx = find_device_by_id(devices, id);
-        if (idx < 0)
-            cout << to_string(ERROR_UNKNOWN_TOKEN) << " No such id exist" << endl;
-        else
-            change_param(devices[idx], param, value);
+        handleChangeInfo(devices);
     }
     else if (cmd == "7") return false;
     else if (cmd == "8")
@@ -92,6 +86,5 @@ bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
         std::string _tmp;
         std::getline(cin, _tmp);
     }
-    system("clear");
     return true;
 }

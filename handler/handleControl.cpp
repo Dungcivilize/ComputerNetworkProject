@@ -62,7 +62,7 @@ void take_control(Device* selected_device)
             cout << "Fertilizing cancelled." << endl;
             return;
         }
-        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 2 " + to_string(cn) + " " + to_string(cp) + " " + to_string(ck) + " " + to_string(volume));
+        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 2 " + to_string(volume) + " " + to_string(cn) + " " + to_string(cp) + " " + to_string(ck));
     }
     else if (selected_device->info.type == LIGHTING) {
         cout << "Enter lighting duration in minutes (input -1 to cancel): ";
