@@ -164,19 +164,9 @@ class SprinklerDataStructure : public SensorDataStructure {
             }
 
             bool is_pumping = false;
-            // Nếu lượng nước hiện tại trong bể thấp hơn 50%
+            // Nếu lượng nước hiện tại trong bể thấp hơn 10%
             if (current_water_amount < tank_capacity / 10) {
                 is_pumping = true;
-            }
-            
-            // Kiểm tra timer 
-            bool timer_triggered = false;
-            time_t current_time = time(nullptr);
-            if (timer_set && current_time >= timer_time) {
-                // Thực hiện thay đổi trạng thái theo timer
-                powered_on = timer_set_to;
-                timer_set = false; // reset timer
-                timer_triggered = true;
             }
 
             int running_on_command_minutes = is_running_on_command ? command_volume / volume_per_minute : 0;
@@ -191,6 +181,16 @@ class SprinklerDataStructure : public SensorDataStructure {
             float energy_used = calculate_power_consumption(duration_minutes, running_on_command_minutes);
             total_energy_consumed += energy_used;
 
+            // Kiểm tra timer 
+            bool timer_triggered = false;
+            time_t current_time = time(nullptr);
+            if (timer_set && current_time >= timer_time) {
+                // Thực hiện thay đổi trạng thái theo timer
+                powered_on = timer_set_to;
+                timer_set = false; // reset timer
+                timer_triggered = true;
+            }
+            
             // Tính độ thay đổi độ ẩm theo thời gian trong ngày, ban ngày độ ẩm giảm nhanh hơn ban đêm
             float humidity_change_rate = (start_time % 86400 >= 21600 && start_time % 86400 <= 64800) ? -0.15 : -0.05; // từ 6h đến 18h
             humidity += humidity_change_rate * duration_minutes;
@@ -247,9 +247,6 @@ class FertilizerDataStructure : public SensorDataStructure {
         float fertilizer_amount_nitrogen_per_liter;
         float fertilizer_amount_phosphorus_per_liter;
         float fertilizer_amount_potassium_per_liter;
-        float nitrogen_amout_per_percent_concentration;
-        float phosphorus_amout_per_percent_concentration;
-        float potassium_amout_per_percent_concentration;
         int volume_per_minute;
         int command_volume = 0;
         float command_fertilizer_amount_nitrogen_per_liter = 0;
@@ -257,7 +254,7 @@ class FertilizerDataStructure : public SensorDataStructure {
         float command_fertilizer_amount_potassium_per_liter = 0;
         int base_volume;
         int tank_capacity;
-        int current_warter_amount;
+        int current_water_amount;
         time_t fertilizing_start_time;
         time_t fertilizing_end_time;
         FertilizerDataStructure(string id): SensorDataStructure() {
@@ -323,7 +320,7 @@ class FertilizerDataStructure : public SensorDataStructure {
             }
 
             // pump to fill tank if low
-            if (current_warter_amount < tank_capacity / 10) {
+            if (current_water_amount < tank_capacity / 10) {
                 power_consumption += 40;
             }
 
@@ -360,23 +357,6 @@ class FertilizerDataStructure : public SensorDataStructure {
         void run(time_t start_time, time_t end_time) override {
             int duration_minutes = (end_time - start_time) / 60;
 
-            bool is_fertilizing = false;
-            if (nitrogen_concentration < min_nitrogen_concentration ||
-                phosphorus_concentration < min_phosphorus_concentration ||
-                potassium_concentration < min_potassium_concentration ||
-                is_running_on_command) {
-                is_fertilizing = true;
-            }
-
-            // handle timer
-            bool timer_triggered = false;
-            time_t current_time = time(nullptr);
-            if (timer_set && current_time >= timer_time) {
-                powered_on = timer_set_to;
-                timer_set = false;
-                timer_triggered = true;
-            }
-
             int running_on_command_minutes = is_running_on_command ? command_volume / volume_per_minute : 0;
             if (running_on_command_minutes > duration_minutes) {
                 running_on_command_minutes = duration_minutes;
@@ -388,47 +368,56 @@ class FertilizerDataStructure : public SensorDataStructure {
 
             float energy_used = calculate_power_consumption(duration_minutes, running_on_command_minutes);
             total_energy_consumed += energy_used;
+
+            // handle timer
+            bool timer_triggered = false;
+            time_t current_time = time(nullptr);
+            if (timer_set && current_time >= timer_time) {
+                powered_on = timer_set_to;
+                timer_set = false;
+                timer_triggered = true;
+            }
+
             // update concentrations
-            nitrogen_concentration -= duration_minutes * 0.1f; // simple decay model
+            nitrogen_concentration -= duration_minutes * 0.1f; 
             phosphorus_concentration -= duration_minutes * 0.05f;
             potassium_concentration -= duration_minutes * 0.05f;
 
             // pump to fill tank
-            if (current_warter_amount < tank_capacity / 10) {
+            if (current_water_amount < tank_capacity / 10) {
                 int water_added = 2 * base_volume * duration_minutes;
-                current_warter_amount += water_added;
+                current_water_amount += water_added;
             }
 
-            if (is_fertilizing) {
-                int auto_warter_used = volume_per_minute * duration_minutes;
-                int command_warter_used = volume_per_minute * running_on_command_minutes;
-                int used = auto_warter_used + command_warter_used;
-                if (used > current_warter_amount) {
-                    used = current_warter_amount;
-                    auto_warter_used = used - command_warter_used;
-                    if (auto_warter_used < 0) {
-                        auto_warter_used = 0;
-                        command_volume = command_warter_used - used;
-                        command_warter_used = used;
-                    }
+            int auto_water_used = volume_per_minute * duration_minutes;
+            int command_water_used = volume_per_minute * running_on_command_minutes;
+            int used = auto_water_used + command_water_used;
+            if (used > current_water_amount) {
+                used = current_water_amount;
+                auto_water_used = used - command_water_used;
+                if (auto_water_used < 0) {
+                    auto_water_used = 0;
+                    command_volume = command_water_used - used;
+                    command_water_used = used;
                 }
-                current_warter_amount -= used;
-                float total_added_n = nitrogen_concentration < min_nitrogen_concentration ? fertilizer_amount_nitrogen_per_liter * auto_warter_used : 0 + command_fertilizer_amount_nitrogen_per_liter * command_warter_used;
-                float total_added_p = phosphorus_concentration < min_phosphorus_concentration ? fertilizer_amount_phosphorus_per_liter * auto_warter_used : 0 + command_fertilizer_amount_phosphorus_per_liter * command_warter_used;
-                float total_added_k = potassium_concentration < min_potassium_concentration ? fertilizer_amount_potassium_per_liter * auto_warter_used : 0 + command_fertilizer_amount_potassium_per_liter * command_warter_used;
-
-                // Apply to concentrations (simple model): scale down total added to concentration units
-                const float SCALE_DIV = 100.0f; 
-                nitrogen_concentration += total_added_n / SCALE_DIV;
-                phosphorus_concentration += total_added_p / SCALE_DIV;
-                potassium_concentration += total_added_k / SCALE_DIV;
             }
-            if (current_warter_amount < 0) current_warter_amount = 0;
-            if (current_warter_amount > tank_capacity) current_warter_amount = tank_capacity;
+            current_water_amount -= used;
+            float total_added_n = nitrogen_concentration < min_nitrogen_concentration ? fertilizer_amount_nitrogen_per_liter * auto_water_used : 0 + command_fertilizer_amount_nitrogen_per_liter * command_water_used;
+            float total_added_p = phosphorus_concentration < min_phosphorus_concentration ? fertilizer_amount_phosphorus_per_liter * auto_water_used : 0 + command_fertilizer_amount_phosphorus_per_liter * command_water_used;
+            float total_added_k = potassium_concentration < min_potassium_concentration ? fertilizer_amount_potassium_per_liter * auto_water_used : 0 + command_fertilizer_amount_potassium_per_liter * command_water_used;
+
+            // Apply to concentrations (simple model): scale down total added to concentration units
+            const float SCALE_DIV = 100.0f; 
+            nitrogen_concentration += total_added_n / SCALE_DIV;
+            phosphorus_concentration += total_added_p / SCALE_DIV;
+            potassium_concentration += total_added_k / SCALE_DIV;
+
+            if (current_water_amount < 0) current_water_amount = 0;
+            if (current_water_amount > tank_capacity) current_water_amount = tank_capacity;
             cout << "Fertilizer " << id << " run from " << ctime(&start_time) << " to " << ctime(&end_time)
                  << " | Energy used: " << energy_used << " kWh"
                  << " | N: " << nitrogen_concentration << "ppm, P: " << phosphorus_concentration << "ppm, K: " << potassium_concentration << "ppm"
-                 << " | Water left: " << current_warter_amount << " Liters" << endl;
+                 << " | Water left: " << current_water_amount << " Liters" << endl;
             if (timer_triggered) {
                 cout << "  (Timer triggered: Power set to " << (powered_on ? "ON" : "OFF") << ")" << endl;
             }
