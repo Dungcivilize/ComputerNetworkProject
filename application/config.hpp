@@ -6,45 +6,19 @@
 static bool config(Device& device, const string& param, int value, string& resp, int& exec_code)
 {
     string buf = "CONFIG " + device.token + " " + param + " " + to_string(value);
-    
-    if (!send_message(device.fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        resp = "Cannot send request to device";
-        return false;
-    }
-    if (!recv_message(device.fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        resp = "Cannot receive response from device";
-        return false;
-    }
-
-    stringstream ss(buf);
-    string cmd;
-    
-    ss >> cmd;
-    if (cmd != "CONFIG")
-    {
-        exec_code = ERROR_BAD_REQUEST;
-        resp = "Response does not match the expected format of this protocol";
-        return false;
-    }
-
-    ss >> exec_code;
-    auto p1 = buf.find(' ');
-    auto p2 = buf.find(' ', p1 + 1);
-    resp = buf.substr(p2 + 1);
+    communicate(device.fd, "CONFIG", buf, resp, exec_code);
+    string message = string("CONFIG ") + (exec_code == SUCCESS_CONFIG ? "OK:" : "ERR:") + to_string(exec_code) + " " + resp;
+    logging(PLOG, message);
 
     if (exec_code != SUCCESS_CONFIG) return false;
 
-    if (device.type == "sensor" || (device.type == "light" && param == "P") || (device.type == "sprinkler" && param == "HMIN") || (device.type == "fertilizer" && param == "C"))
+    if (device.type == "sensor" || (device.type == "light" && param == "P") || (device.type == "sprinkler" && param == "Hmin") || (device.type == "fertilizer" && param == "C"))
         device.params[0] = value;
-    else if ((device.type == "sprinkler" && param == "HMAX") || (device.type == "fertilizer" && param == "V") || (device.type == "LIGHT" && param == "S"))
+    else if ((device.type == "sprinkler" && param == "Hmax") || (device.type == "fertilizer" && param == "V") || (device.type == "LIGHT" && param == "S"))
         device.params[1] = value;
-    else if (param == "NMIN")
+    else if ((param == "Nmin" && device.type == "fertilizer") || (device.type == "sprinkler" && param == "V"))
         device.params[2] = value;
-    else if (param == "PMIN")
+    else if (param == "Pmin")
         device.params[3] = value;
     else
         device.params[4] = value;

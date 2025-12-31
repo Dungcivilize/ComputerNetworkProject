@@ -67,7 +67,8 @@ struct Device
         else if (type == "sprinkler")
         {
             params = "Hmin: " + to_string(this->params[0]) +
-            "\nHmax: " + to_string(this->params[1]);
+            "\nHmax: " + to_string(this->params[1]) +
+            "\nV: " + to_string(this->params[2]);
         }
         else if (type == "fertilizer")
         {

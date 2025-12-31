@@ -56,34 +56,10 @@ static bool get_localaddr(char* network, char* broadcast, int& prefix)
 static bool ask(int fd, const string& id, string& resp, int& exec_code)
 {
     string buf = "SCAN " + id;
-
-    if (!send_message(fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        return false;
-    } 
-    if (!recv_message(fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        return false;
-    } 
-
-    stringstream ss(buf);
-    string cmd;
-    ss >> cmd;
-    if (cmd == "SCAN")
-    {
-        ss >> exec_code;
-        auto p1 = buf.find(' ');
-        auto p2 = buf.find(' ', p1 + 1);
-        resp = buf.substr(p2 + 1);
-    }
-    else
-    {
-        exec_code = ERROR_BAD_REQUEST;
-        return false;
-    }
-    return true;
+    communicate(fd, "SCAN", buf, resp, exec_code);
+    string message = string("SCAN ") + (exec_code == SUCCESS_SCAN ? "OK:" : "ERR:") + to_string(exec_code) + " " + resp;
+    logging(PLOG, message);
+    return exec_code == SUCCESS_SCAN;
 }
 
 /* Try probing address with time limit. */

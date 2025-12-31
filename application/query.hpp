@@ -8,34 +8,9 @@
 static bool query(Device& device, const string& scope, string& resp, int& exec_code)
 {
     string buf = "QUERY " + device.token + " " + scope;
-    
-    if (!send_message(device.fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        resp = "Cannot send request to device";
-        return false;
-    }
-    if (!recv_message(device.fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        resp = "Cannot receive response from device";
-        return false;
-    }
-
-    stringstream ss(buf);
-    string cmd;
-    ss >> cmd;
-    if (cmd != "QUERY")
-    {
-        exec_code = ERROR_BAD_REQUEST;
-        resp = "Response does not match the expected format for this protocol";
-        return false;
-    }
-    ss >> exec_code;
-    auto p1 = buf.find(' ');
-    auto p2 = buf.find(' ', p1 + 1);
-    resp = buf.substr(p2 + 1);
-    
+    communicate(device.fd, "QUERY", buf, resp, exec_code);
+    string message = string("QUERY ") + (exec_code == SUCCESS_QUERY ? "OK:" : "ERR:") + to_string(exec_code) + " " + resp;
+    logging(PLOG, message);
     if (exec_code != SUCCESS_QUERY) return false;
 
     vector<string> tokens = parse_info_message(resp);
@@ -55,7 +30,8 @@ static bool query(Device& device, const string& scope, string& resp, int& exec_c
         device.state = stoi(tokens[0]);
         int nparams = 0;
         if (device.type == "sensor") nparams = 1;
-        else if (device.type == "sprinkler" || device.type == "light") nparams = 2;
+        else if (device.type == "light") nparams = 2;
+        else if (device.type == "sprinkler") nparams = 3;
         else nparams = 5;
         vector<int> params;
         for (size_t idx = 1; idx <= nparams; idx++)

@@ -31,7 +31,7 @@ Xây dựng ứng dụng mô phỏng bao gồm 2 loại chương trình:
 - Điều khiển bật tắt: 1 điểm x
 - Thiết lập thông số cho bộ phận tưới nước: 1 điểm
 - Thiết lập thông số cho bộ phận bón phân: 2 điểm
-- Thiết lập thông số cho đèn quang hợp: 1 điểm x/2
+- Thiết lập thông số cho đèn quang hợp: 1 điểm x
 - Điều khiển trực tiếp (Bơm nước, bón phân, bật đèn) bên cạnh các cơ chế lập lịch: 1 điểm x
 - Lấy thông tin, thông số mỗi loại thiết bị(cảm biến môi trường, tưới nước, bón phân, quang hợp): 2 điểm x
 - Ghi log hoạt động trên mỗi thiết bị: 1 điểm x

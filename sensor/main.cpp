@@ -1,63 +1,16 @@
 #include "framework.hpp"
 #include "streamtransmission.hpp"
 #include "utils.hpp"
-
-unordered_map<string, string> credentials;
-string id = randstr(16);
-string password = "sensor";
-const string type = "sensor";
-int power = 0;
-int T = 10;
-ofstream file;
-
-pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cnd = PTHREAD_COND_INITIALIZER;
-
-void work()
-{
-    cout << "SYS: Evaluating nutrients." << endl;
-    vector<double> stats = randnumbers(4, 0, 100);
-    time_t now = time(NULL);
-    struct tm tm;
-    localtime_r(&now, &tm);
-
-    char buf[64];
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
-    string timestamp(buf);
-    
-    file << timestamp + " H=" + to_string(stats[0]) + " N=" + to_string(stats[1]) + " P=" + to_string(stats[2]) + " K=" + to_string(stats[3]) << endl; 
-}
-
-void* work_thread(void* arg)
-{
-    pthread_mutex_lock(&m);
-    while (true)
-    {
-        while (!power)
-            pthread_cond_wait(&cnd, &m);
-
-        timespec t;
-        clock_gettime(CLOCK_REALTIME, &t);
-        t.tv_sec += T * 60;
-
-        int rc = pthread_cond_timedwait(&cnd, &m, &t);
-        if (!power || (rc == 0)) continue;
-
-        pthread_mutex_unlock(&m);
-        work();
-        pthread_mutex_lock(&m);
-    }
-}
-
-bool check_credential(unordered_map<string, string>& credentials, const string& token)
-{
-    auto it = credentials.find(token);
-    return !(it == credentials.end());
-}
+#include "work.hpp"
+#include "handler/scan.hpp"
+#include "handler/connect.hpp"
+#include "handler/changepassword.hpp"
+#include "handler/config.hpp"
+#include "handler/query.hpp"
+#include "handler/power.hpp"
 
 int main(int argc, char* argv[])
 {
-    file.open("activity_log.txt");
     cout << "Sensor running:\nID: " + id + "\nPassword: " + password << endl;
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -138,140 +91,26 @@ int main(int argc, char* argv[])
                     continue;
                 }
 
-                stringstream ss(buf);
-                string cmd;
-                ss >> cmd;
+                string cmd, content, reply;
+                parse_message(buf, cmd, content);
 
-                string reply;
                 if (cmd == "SCAN")
                 {
-                    cout << to_string(SUCCESS_SCAN) + ": Responded to a scan signal" << endl;
-                    reply = "SCAN " + to_string(SUCCESS_SCAN) + " " + id + ":" + type;
+                    handle_scan(content, reply);
                     closefd = true;
                 }           
                 else if (cmd == "CONNECT")
-                {
-                    string appid, in_password;
-                    ss >> appid >> in_password;
-                    if (password == in_password)
-                    {
-                        string token = randstr(TOKEN_SIZE);
-                        credentials[token] = appid;
-                        reply = "CONNECT " + to_string(SUCCESS_CONNECTION) + " " + token + ":" + id + ":" + type;
-                        cout << to_string(SUCCESS_CONNECTION) + ": Successful connection from: " + appid << endl;
-                    }
-                    else
-                    {
-                        closefd = true;
-                        reply = "CONNECT " + to_string(ERROR_PW_INCORRECT) + " Password incorrect";
-                        cout << to_string(ERROR_PW_INCORRECT) + ": Refuse connection due to incorrect password" << endl;
-                    }
-                }
+                    handle_connect(content, reply, closefd);
                 else if (cmd == "CHANGE_PW")
-                {
-                    string token, current_pass, new_pass;
-                    ss >> token >> current_pass >> new_pass;
-                    if (!check_credential(credentials, token))
-                    {
-                        reply = "CHANGE_PW " + to_string(ERROR_INVALID_TOKEN) + " Invalid token";
-                        cout << to_string(ERROR_INVALID_TOKEN) + ": Cannot identify received credential token" << endl;
-                    }
-                    else if (current_pass != password)
-                    {
-                        reply = "CHANGE_PW " + to_string(ERROR_PW_INCORRECT) + " Password incorrect";
-                        cout << to_string(ERROR_PW_INCORRECT) + ": Password change failed due to incorrect password. Request from: " + credentials[token] << endl;
-                    }
-                    else
-                    {
-                        password = new_pass;
-                        reply = "CHANGE_PW " + to_string(SUCCESS_PW_CHANGE) + " OK";
-                        cout << to_string(SUCCESS_PW_CHANGE) + ": Password changed to \"" + password + "\". Request from: " + credentials[token] << endl;
-                    }
-                }
+                    handle_change_password(content, reply);
                 else if (cmd == "QUERY")
-                {
-                    string token, scope;
-                    ss >> token >> scope;
-                    if (!check_credential(credentials, token))
-                    {
-                        reply = "QUERY " + to_string(ERROR_INVALID_TOKEN) + " Invalid token";
-                        cout << to_string(ERROR_INVALID_TOKEN) + ": Cannot identify received credential token" << endl;
-                    }
-                    else if (scope != "STATE" && scope != "PARAM" && scope != "SCHEDULE" && scope != "ALL")
-                    {
-                        reply = "QUERY " + to_string(ERROR_INVALID_SCOPE) + " Invalid scope";
-                        cout << to_string(ERROR_INVALID_SCOPE) + ": Invalid scope received: " + scope + ". Request from: " + credentials[token] << endl;
-                    }
-                    else
-                    {
-                        string message;
-                        if (scope == "STATE") message = to_string(power);
-                        else if (scope == "PARAM") message = to_string(T);
-                        else if (scope == "SCHEDULE") message = "NaN";
-                        else message = to_string(power) + ":" + to_string(T) + ":" + "NaN";
-                        reply = "QUERY " + to_string(SUCCESS_QUERY) + " " + message;
-                        cout << to_string(SUCCESS_QUERY) + ": Query OK. Request from: " + credentials[token] << endl;
-                    }
-                }
+                    handle_query(content, reply);
                 else if (cmd == "CONFIG")
-                {
-                    string token, param;
-                    int value;
-                    ss >> token >> param >> value;
-                    if (!check_credential(credentials, token))
-                    {
-                        reply = "CONFIG " + to_string(ERROR_INVALID_TOKEN) + " Invalid token";
-                        cout << to_string(ERROR_INVALID_TOKEN) + ": Cannot identify received credential token" << endl;
-                    }
-                    else if (param != "T")
-                    {
-                        reply = "CONFIG " + to_string(ERROR_INVALID_PARAM) + " Unknown parameter";
-                        cout << to_string(ERROR_INVALID_PARAM) + ": Unknown parameter. Request from: " + credentials[token] << endl;
-                    }
-                    else if (value <= 0)
-                    {
-                        reply = "CONFIG " + to_string(ERROR_INVALID_VALUE) + " T must greater than 0";
-                        cout << to_string(ERROR_INVALID_VALUE) + ": Invalid value received. Request from: " + credentials[token] << endl;
-                    }
-                    else
-                    {
-                        pthread_mutex_lock(&m);
-                        T = value;
-                        pthread_cond_signal(&cnd);
-                        pthread_mutex_unlock(&m);
-                        reply = "CONFIG " + to_string(SUCCESS_CONFIG) + " OK";
-                        cout << to_string(SUCCESS_CONFIG) + ": T has been set to " + to_string(T) + ". Request from: " + credentials[token] << endl;
-                    }
-                }
+                    handle_config(content, reply);
                 else if (cmd == "POWER")
-                {
-                    string token, state;
-                    ss >> token >> state;
-                    if (!check_credential(credentials, token))
-                    {
-                        reply = "POWER " + to_string(ERROR_INVALID_TOKEN) + " Invalid token";
-                        cout << to_string(ERROR_INVALID_TOKEN) + ": Cannot identify received credential token" << endl;
-                    }
-                    else if ((state == "ON" && power) || (state == "OFF" && !power) || (state != "ON" && state != "OFF"))
-                    {
-                        reply = "POWER " + to_string(ERROR_INVALID_VALUE) + " Invalid state";
-                        cout << to_string(ERROR_INVALID_VALUE) + ": Invalid state. Request from: " + credentials[token] << endl;
-                    }
-                    else
-                    {
-                        pthread_mutex_lock(&m);
-                        power = state == "ON" ? 1 : 0;
-                        pthread_cond_signal(&cnd);
-                        pthread_mutex_unlock(&m);
-                        reply = "POWER " + to_string(SUCCESS_COMMAND) + " OK";
-                        cout << to_string(SUCCESS_COMMAND) + ": Power turned " + (power ? "on" : "off") + ". Request from: " + credentials[token] << endl;
-                    }
-                }
+                    handle_power(content, reply);
                 else
-                {
                     reply = cmd + " " + to_string(ERROR_UNSUPPORT_PROTOCOL) + " This protocol is not supported";
-                    cout << to_string(ERROR_UNSUPPORT_PROTOCOL) + ": Unknown protocol received.";
-                }
                 if (!send_message(pfds[i].fd, reply) || closefd)
                 {
                     close(pfds[i].fd);
@@ -283,7 +122,6 @@ int main(int argc, char* argv[])
             i++;
         }
     }
-    file.close();
     for (size_t i = 0; i < pfds.size(); i++)
         close(pfds[i].fd);
     return 0;

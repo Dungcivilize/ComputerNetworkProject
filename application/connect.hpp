@@ -9,55 +9,19 @@
 bool parse_connection_reply(const string& resp, string& token, string& id, string& type)
 {
     vector<string> tokens = parse_info_message(resp);
-    if (tokens.empty()) return false;
-    for (size_t idx = 0; idx < tokens.size(); idx++)
-        switch (idx)
-        {
-        case 0:
-            token = tokens[idx];
-            break;
-        case 1:
-            id = tokens[idx];
-            break;
-        case 2:
-            type = tokens[idx];
-            break;
-        }
+    if (tokens.size() != 3) return false;
+    token = tokens[0];
+    id = tokens[1];
+    type = tokens[2];
     return true;
 }
 
 static bool try_connection(int fd, const string& id, const string& password, string& resp, int& exec_code)
 {
     string buf = "CONNECT " + id + " " + password;
-
-    if (!send_message(fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        resp = "Cannot send request to the device";
-        return false;
-    }
-    if (!recv_message(fd, buf))
-    {
-        exec_code = ERROR_NO_CONNECTION;
-        resp = "Cannot receive response from the device";
-        return false;
-    }
-
-    stringstream ss(buf);
-    string cmd;
-    ss >> cmd;
-    if (cmd != "CONNECT")
-    {
-        exec_code = ERROR_BAD_REQUEST;
-        resp = "Response does not match the expected format for this protocol";
-        return false;
-    }
-
-    ss >> exec_code;
-    auto p1 = buf.find(' ');
-    auto p2 = buf.find(' ', p1 + 1);
-    resp = buf.substr(p2 + 1);
-    
+    communicate(fd, "CONNECT", buf, resp, exec_code);
+    string message = string("CONNECT ") + (exec_code == SUCCESS_CONNECTION ? "OK:" : "ERR:") + to_string(exec_code) + " " + resp;
+    logging(PLOG, message);
     return exec_code == SUCCESS_CONNECTION;
 }
 
@@ -90,14 +54,14 @@ static bool connection(DeviceInfo& available, const string& id, const string& pa
         {
             close(fd);
             exec_code = ERROR_BAD_REQUEST;
-            resp = "Response does not match the expected format for this protocol";
+            resp = "Cannot parse received response";
             return false;
         }
         if (device_id != available.id || type != available.type)
         {
             close(fd);
             exec_code = ERROR_BAD_REQUEST;
-            resp = "Failed to validate responded device's information";
+            resp = "Cannot vailidate responded device";
             return false;
         }
         connected.push_back(Device(fd, device_id, type, token));

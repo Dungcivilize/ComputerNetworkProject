@@ -7,6 +7,9 @@
 #include "config.hpp"
 #include "power.hpp"
 #include "light.hpp"
+#include "schedule.hpp"
+#include "water.hpp"
+#include "fertilize.hpp"
 
 void display_info(vector<Device>& devices, const string& id)
 {
@@ -76,8 +79,29 @@ int main(int argc, char* argv[])
         else if (cmd == "light")
         {
             string device_id;
-            ss >> device_id;
-            execute_light(connected, device_id);
+            int p, s;
+            ss >> device_id >> p >> s;
+            execute_light(connected, device_id, p, s);
+        }
+        else if (cmd == "water")
+        {
+            string device_id;
+            int v;
+            ss >> device_id >> v;
+            execute_water(connected, device_id, v);
+        }
+        else if (cmd == "fertilize")
+        {
+            string device_id;
+            int c, v;
+            ss >> device_id >> c >> v;
+            execute_fertilize(connected, device_id, c, v);
+        }
+        else if (cmd == "schedule")
+        {
+            string device_id, scope, timestamp;
+            ss >> device_id >> scope >> timestamp;
+            execute_schedule(connected, device_id, scope, timestamp);
         }
         else
             cerr << "Unknown action. Type \"help all\" to see all actions." << endl;

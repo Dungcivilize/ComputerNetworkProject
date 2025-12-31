@@ -29,6 +29,7 @@
 // Error codes
 #define ERROR_UNSUPPORT_PROTOCOL 801
 #define ERROR_BAD_REQUEST 802
+#define ERROR_MISSING_ARG 803
 
 #define ERROR_SCAN_BLOCKED 101
 #define ERROR_PW_INCORRECT 201
@@ -54,8 +55,46 @@
 #include <poll.h>
 #include <ifaddrs.h>
 #include <net/if.h>
-#include <time.h>
 
 // C++ libs
 #include <bits/stdc++.h>
+#include <ctime>
 using namespace std;
+
+const string PLOG = "log/protocol.txt";
+
+unordered_map<string, string> credentials;
+
+bool check_credential(const string& token)
+{
+    auto it = credentials.find(token);
+    return !(it == credentials.end());
+}
+
+static string randstr(size_t len)
+{
+    const char alphabet[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    const size_t alphabet_len = sizeof(alphabet) - 1;
+
+    mt19937 rng(random_device{}());
+    uniform_int_distribution<size_t> dist(0, alphabet_len - 1);
+
+    string s;
+    s.reserve(len);
+    for (size_t i = 0; i < len; i++)
+        s.push_back(alphabet[dist(rng)]);
+    return s;
+}
+
+string id = randstr(ID_SIZE);
+string password = "sensor";
+const string type = "sensor";
+
+int power = 0;
+int T = 5;
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cnd = PTHREAD_COND_INITIALIZER;

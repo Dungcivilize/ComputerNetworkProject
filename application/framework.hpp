@@ -54,3 +54,5 @@
 // C++ libs
 #include <bits/stdc++.h>
 using namespace std;
+
+const string PLOG = "log/protocol.txt";

@@ -2,31 +2,31 @@
 
 #include "framework.hpp"
 
-static string randstr(size_t len)
+static bool parse_message(const string& message, string& opcode, string& content)
 {
-    const char alphabet[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-    const size_t alphabet_len = sizeof(alphabet) - 1;
-
-    mt19937 rng(random_device{}());
-    uniform_int_distribution<size_t> dist(0, alphabet_len - 1);
-
-    string s;
-    s.reserve(len);
-    for (size_t i = 0; i < len; i++)
-        s.push_back(alphabet[dist(rng)]);
-    return s;
+    stringstream ss(message);
+    if (!(ss >> opcode >> std::ws)) return false;
+    std::getline(ss, content);
+    return true;
 }
 
-static vector<double> randnumbers(size_t len, double min = 0, double max = 1)
+static bool logging(const string& filepath, const string& content)
 {
-    vector<double> stats;
-    random_device rd;
-    mt19937 rng(rd());
-    uniform_real_distribution<> dist(min, max);
-    for (int count = 0; count < len; count++)
-        stats.push_back(dist(rng));
-    return stats;
+    ofstream out(filepath, std::ios::app);
+    if (!out)
+    {
+        cerr << "An error occured while trying to write into " + filepath << endl;
+        return false;
+    }
+    time_t now = time(nullptr);
+    struct tm tm;
+    localtime_r(&now, &tm);
+
+    char buf[64];
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
+    string timestamp(buf);
+
+    out << timestamp + " " + content << endl;
+    out.close();
+    return true;
 }
