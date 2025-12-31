@@ -1,47 +1,52 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -pthread
+CXXFLAGS := -std=c++11 -Wall -Wextra -pthread
+INCLUDES := -I. -Icommon -Idependencies -Ihandler -Isensorserver -Itests
 
-APP_SRC := application/main.cpp
-APP_BIN := application/app
+# Source groups
+COMMON_SRCS := $(wildcard common/*.cpp)
+DEPS_SRCS := $(wildcard dependencies/*.cpp)
+HANDLER_SRCS := $(wildcard handler/*.cpp)
+ROOT_SRCS := app.cpp
+SENSORSERVER_SRCS := $(wildcard sensorserver/*.cpp)
 
-SENSOR_SRC := sensor/main.cpp
-SENSOR_BIN := sensor/sensor
+# Test sources
+TEST_SRCS := tests/test_sensor.cpp tests/test_sensor_client.cpp tests/testEmulatorSensor.cpp tests/testEmulator.cpp
 
-SPRINKLER_SRC := sprinkler/main.cpp
-SPRINKLER_BIN := sprinkler/sprinkler
+# Targets
+APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
+SENSOR_SRCS := sensorserver/sensor.cpp $(COMMON_SRCS) $(DEPS_SRCS)
 
-FERTILIZER_SRC := fertilizer/main.cpp
-FERTILIZER_BIN := fertilizer/fertilizer
+APP_OBJS := $(APP_SRCS:.cpp=.o)
+SENSOR_OBJS := $(SENSOR_SRCS:.cpp=.o)
 
-LIGHT_SRC := light/main.cpp
-LIGHT_BIN := light/light
+TEST_BINARIES := tests/test_sensor tests/test_sensor_client tests/testEmulatorSensor tests/testEmulator
 
-BINS := $(APP_BIN) $(SENSOR_BIN) $(SPRINKLER_BIN) $(FERTILIZER_BIN) $(LIGHT_BIN)
+all: app sensor $(TEST_BINARIES)
 
-.PHONY: all app sensor sprinkler fertilizer light clean
+.PHONY: all clean
 
-all: $(BINS)
+app: $(APP_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(APP_OBJS)
 
-app: $(APP_BIN)
-sensor: $(SENSOR_BIN)
-sprinkler: $(SPRINKLER_BIN)
-fertilizer: $(FERTILIZER_BIN)
-light: $(LIGHT_BIN)
+sensor: $(SENSOR_OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(SENSOR_OBJS)
 
-$(APP_BIN): $(APP_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+tests/test_sensor: tests/test_sensor.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-$(SENSOR_BIN): $(SENSOR_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+tests/test_sensor_client: tests/test_sensor_client.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-$(SPRINKLER_BIN): $(SPRINKLER_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+tests/testEmulatorSensor: tests/testEmulatorSensor.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-$(FERTILIZER_BIN): $(FERTILIZER_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+tests/testEmulator: tests/testEmulator.cpp $(DEPS_SRCS) $(COMMON_SRCS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 
-$(LIGHT_BIN): $(LIGHT_SRC)
-	$(CXX) $(CXXFLAGS) -o $@ $<
+# Pattern rule for compiling sources
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -f $(BINS)
+	rm -f $(APP_OBJS) $(SENSOR_OBJS) */*.o common/*.o dependencies/*.o handler/*.o sensorserver/*.o tests/*.o
+	rm -f app sensor $(TEST_BINARIES)
