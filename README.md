@@ -21,20 +21,20 @@ Xây dựng ứng dụng mô phỏng bao gồm 2 loại chương trình:
 + Người dùng có thể điều khiển bật/tắt, thiết lập thông số hoạt động
 
 ## 2. Yêu cầu
-- Xử lý truyền dòng: 1 điểm
-- Cài đặt cơ chế vào/ra socket trên server: 2 điểm
-- Xác thực truy cập điều khiển: 1 điểm
-- Khởi tạo các thông số cho thiết bị: 1 điểm
-- Quét thiết bị: 2 điểm
-- Kết nối thiết bị: 2 điểm
-- Đổi mật khẩu: 1 điểm
-- Điều khiển bật tắt: 1 điểm
-- Thiết lập thông số cho bộ phận tưới nước: 1 điểm
-- Thiết lập thông số cho bộ phận bón phân: 2 điểm
-- Thiết lập thông số cho đèn quang hợp: 1 điểm
-- Điều khiển trực tiếp (Bơm nước, bón phân, bật đèn) bên cạnh các cơ chế lập lịch: 1 điểm
-- Lấy thông tin, thông số mỗi loại thiết bị(cảm biến môi trường, tưới nước, bón phân, quang hợp): 2 điểm
-- Ghi log hoạt động trên mỗi thiết bị: 1 điểm
+- Xử lý truyền dòng: 1 điểm x
+- Cài đặt cơ chế vào/ra socket trên server: 2 điểm x
+- Xác thực truy cập điều khiển: 1 điểm x
+- Khởi tạo các thông số cho thiết bị: 1 điểm x
+- Quét thiết bị: 2 điểm x
+- Kết nối thiết bị: 2 điểm x 
+- Đổi mật khẩu: 1 điểm x
+- Điều khiển bật tắt: 1 điểm x
+- Thiết lập thông số cho bộ phận tưới nước: 1 điểm x
+- Thiết lập thông số cho bộ phận bón phân: 2 điểm x
+- Thiết lập thông số cho đèn quang hợp: 1 điểm x
+- Điều khiển trực tiếp (Bơm nước, bón phân, bật đèn) bên cạnh các cơ chế lập lịch: 1 điểm x
+- Lấy thông tin, thông số mỗi loại thiết bị(cảm biến môi trường, tưới nước, bón phân, quang hợp): 2 điểm x
+- Ghi log hoạt động trên mỗi thiết bị: 1 điểm x
 - Quản lý thông tin vườn cây: 1 điểm
 
 ## 3. Thành viên

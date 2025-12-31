@@ -1,41 +1,47 @@
 CXX := g++
-CXXFLAGS := -std=c++11 -Wall -pthread
-INCLUDES := -I. -Icommon -Idependencies -Ihandler
+CXXFLAGS := -std=c++17 -pthread
 
-# Gather sources from the current project layout
-COMMON_SRCS := $(wildcard common/*.cpp)
-DEPS_SRCS := $(wildcard dependencies/*.cpp)
-HANDLER_SRCS := $(wildcard handler/*.cpp)
+APP_SRC := application/main.cpp
+APP_BIN := application/app
 
-APP_SRCS := app.cpp $(COMMON_SRCS) $(DEPS_SRCS) $(HANDLER_SRCS)
-SENSOR_SRCS := sensor.cpp dependencies/streamtransmission.cpp dependencies/utils.cpp
-TEST_EMULATOR_SENSOR_SRCS := tests/testEmulatorSensor.cpp
-TEST_EMULATOR_SRCS := tests/testEmulator.cpp
+SENSOR_SRC := sensor/main.cpp
+SENSOR_BIN := sensor/sensor
 
-APP_OBJS := $(APP_SRCS:.cpp=.o)
-SENSOR_OBJS := $(SENSOR_SRCS:.cpp=.o)
-TEST_EMULATOR_SENSOR_OBJS := $(TEST_EMULATOR_SENSOR_SRCS:.cpp=.o)
-TEST_EMULATOR_OBJS := $(TEST_EMULATOR_SRCS:.cpp=.o)
+SPRINKLER_SRC := sprinkler/main.cpp
+SPRINKLER_BIN := sprinkler/sprinkler
 
-all: app sensor testEmulatorSensor testEmulator
+FERTILIZER_SRC := fertilizer/main.cpp
+FERTILIZER_BIN := fertilizer/fertilizer
 
-.PHONY: all clean
+LIGHT_SRC := light/main.cpp
+LIGHT_BIN := light/light
 
-app: $(APP_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(APP_OBJS)
+BINS := $(APP_BIN) $(SENSOR_BIN) $(SPRINKLER_BIN) $(FERTILIZER_BIN) $(LIGHT_BIN)
 
-sensor: $(SENSOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(SENSOR_OBJS)
+.PHONY: all app sensor sprinkler fertilizer light clean
 
-testEmulatorSensor: $(TEST_EMULATOR_SENSOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(TEST_EMULATOR_SENSOR_OBJS)
+all: $(BINS)
 
-testEmulator: $(TEST_EMULATOR_OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(TEST_EMULATOR_OBJS)
+app: $(APP_BIN)
+sensor: $(SENSOR_BIN)
+sprinkler: $(SPRINKLER_BIN)
+fertilizer: $(FERTILIZER_BIN)
+light: $(LIGHT_BIN)
 
-# Generic rule for compiling .cpp to .o
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+$(APP_BIN): $(APP_SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+$(SENSOR_BIN): $(SENSOR_SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+$(SPRINKLER_BIN): $(SPRINKLER_SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+$(FERTILIZER_BIN): $(FERTILIZER_SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+$(LIGHT_BIN): $(LIGHT_SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
 clean:
-	rm -f *.o common/*.o dependencies/*.o handler/*.o app sensor tests/*.o tests/testEmulatorSensor tests/testEmulator
+	rm -f $(BINS)
