@@ -190,7 +190,7 @@ class SprinklerDataStructure : public SensorDataStructure {
                 timer_set = false; // reset timer
                 timer_triggered = true;
             }
-            
+
             // Tính độ thay đổi độ ẩm theo thời gian trong ngày, ban ngày độ ẩm giảm nhanh hơn ban đêm
             float humidity_change_rate = (start_time % 86400 >= 21600 && start_time % 86400 <= 64800) ? -0.15 : -0.05; // từ 6h đến 18h
             humidity += humidity_change_rate * duration_minutes;
@@ -488,13 +488,7 @@ class LightingDataStructure : public SensorDataStructure {
 
         void run(time_t start_time, time_t end_time) override {
             int duration_minutes = (end_time - start_time) / 60;
-            time_t current_time = time(nullptr);
-            bool timer_triggered = false;
-            if (timer_set && current_time >= timer_time) {
-                powered_on = timer_set_to;
-                timer_set = false;
-                timer_triggered = true;
-            }
+            
             int running_on_command_minutes = is_running_on_command ? command_duration_minutes : 0;
             if (running_on_command_minutes > duration_minutes) {
                 running_on_command_minutes = duration_minutes;
@@ -505,6 +499,14 @@ class LightingDataStructure : public SensorDataStructure {
             float energy_used = calculate_power_consumption(duration_minutes, running_on_command_minutes);
             total_energy_consumed += energy_used;
 
+            time_t current_time = time(nullptr);
+            bool timer_triggered = false;
+            if (timer_set && current_time >= timer_time) {
+                powered_on = timer_set_to;
+                timer_set = false;
+                timer_triggered = true;
+            }
+            
             cout << "Lighting " << id << " run from " << ctime(&start_time) << " to " << ctime(&end_time)
                  << " | Energy used: " << energy_used << " kWh" << endl;
             if (timer_triggered) {
