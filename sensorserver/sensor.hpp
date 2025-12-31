@@ -46,8 +46,13 @@ public:
         this->sensor_type = sensor_type;
         if (sensor_type == "SPRINKLER") {
             data = SprinklerDataStructure(id);
-        } else 
+        } else if (sensor_type == "FERTILIZER") {
+            data = fertilizerDataStructure(id);
+        } else if (sensor_type == "LIGHTING") {
+            data = lightingDataStructure(id);
+        } else {
             data = SensorDataStructure();
+        }
     }
 
     // Convenience overload used by tests: default sensor_type to "SENSOR"
@@ -125,8 +130,14 @@ public:
                     response = "400";
                     send_message(clientfd, response);
                 }
-            } else if (cmd == "CONFIG") {
-                
+            } else if (cmd == "5") {
+                // Query data
+                cout << "Received query request from client " << peer_ip << endl;
+                string data_str = data.toString();
+                response = "500 " + data.current_action + " " + data_str;
+                send_message(clientfd, response);
+            } else if (cmd == "6") {
+
             } else {
                 response = "4";
                 send_message(clientfd, response);

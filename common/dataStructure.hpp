@@ -26,7 +26,6 @@ typedef struct Device
 
     Device(std::string ip, int port, int sockfd, const std::string& info_str)
     {
-        cout << "Creating device from info string: " << info_str << endl;
         this->sockfd = sockfd;
         stringstream ss(info_str);
         string return_code;
@@ -37,7 +36,6 @@ typedef struct Device
         }
         string type;
         ss >> info.id >> info.name >> type;
-        cout << "Parsed device info - ID: " << info.id << ", Name: " << info.name << ", Type: " << type << endl;
         if (type == "SPRINKLER")
             info.type = SPRINKLER;
         else if (type == "FERTILIZER")

@@ -36,6 +36,13 @@ class SensorDataStructure {
             int power_consumption = calculate_power(); // công suất tức thời (W)
             return power_consumption * duration_minutes / 60 / 1000.0; // tổng năng lượng tiêu thụ (kWh)
         }
+        void save_config() {
+            // Base class has no config to save
+        }
+        string toString()
+        {
+            return "";
+        }
 };
 
 class SprinklerDataStructure : public SensorDataStructure {
@@ -49,7 +56,7 @@ class SprinklerDataStructure : public SensorDataStructure {
         int tank_capacity;
         int current_water_amount;
         time_t watering_start_time;
-        int watering_end_time;
+        time_t watering_end_time;
         SprinklerDataStructure(string id) : SensorDataStructure() {
             // Đọc từ file config dựa theo id của sprinkler
             // Mở file config
@@ -104,7 +111,7 @@ class SprinklerDataStructure : public SensorDataStructure {
             }
 
             // Nếu bơm đang nạp nước vào bể
-            if (current_water_amount < tank_capacity) {
+            if (current_water_amount < tank_capacity / 10) {
                 // Công suất máy bơm vào bể cố định ở mức 50W
                 power_consumption += 50; // bơm nước vào bể 
             }
@@ -126,8 +133,114 @@ class SprinklerDataStructure : public SensorDataStructure {
                 fclose(file);
             }
         }
+
+        string toString()
+        {
+            return to_string(min_humidity) + " " + to_string(max_humidity) + " " + to_string(watering_start_time) + " " + to_string(watering_end_time);
+        }
     private:
         string id;
 };
 
+class fertilizerDataStructure : public SensorDataStructure {
+    public:
+        float nitrogen_concentration;
+        float phosphorus_concentration;
+        float potassium_concentration;
+        float min_nitrogen_concentration;
+        float min_phosphorus_concentration;
+        float min_potassium_concentration;
+        float fertilizer_amount_nitrogen_per_liter;
+        float fertilizer_amount_phosphorus_per_liter;
+        float fertilizer_amount_potassium_per_liter;
+        int volume_per_minute;
+        int base_volume;
+        int tank_capacity;
+        int current_warter_amount;
+        time_t fertilizing_start_time;
+        time_t fertilizing_end_time;
+        fertilizerDataStructure(string id): SensorDataStructure() {
+            // Đọc từ file config dựa theo id của fertilizer
+            // Mở file config
+            this->id = id;
+            string path = "config/fertilizer_config_" + id + ".txt";
+            FILE* file = fopen(path.c_str(), "r");
+            if (file == nullptr) {
+                // Nếu không mở được file, đặt các giá trị mặc định
+                min_nitrogen_concentration = 10.0;
+                min_phosphorus_concentration = 5.0;
+                min_potassium_concentration = 5.0;
+                fertilizer_amount_nitrogen_per_liter = 50.0;
+                fertilizer_amount_phosphorus_per_liter = 30.0;
+                fertilizer_amount_potassium_per_liter = 30.0;
+                volume_per_minute = 10;
+                tank_capacity = 500;
+                // Lưu các giá trị mặc định vào file
+                save_config();
+            } else {
+                // Đọc các thông số từ file
+                fscanf(file, "%f %f %f %f %f %f %d %d", &min_nitrogen_concentration, &min_phosphorus_concentration, &min_potassium_concentration,
+                       &fertilizer_amount_nitrogen_per_liter, &fertilizer_amount_phosphorus_per_liter, &fertilizer_amount_potassium_per_liter,
+                       &volume_per_minute, &tank_capacity);
+                fclose(file);
+            }
+        }
+        void save_config() {
+            // Lưu các thông số vào file config
+            string path = "config/fertilizer_config_" + id + ".txt";
+            FILE* file = fopen(path.c_str(), "w");
+            if (file != nullptr) {
+                fprintf(file, "%f %f %f %f %f %f %d %d\n", min_nitrogen_concentration, min_phosphorus_concentration, min_potassium_concentration,
+                        fertilizer_amount_nitrogen_per_liter, fertilizer_amount_phosphorus_per_liter, fertilizer_amount_potassium_per_liter,
+                        volume_per_minute, tank_capacity);
+                fclose(file);
+            }
+        }
+        string toString()
+        {
+            return to_string(min_nitrogen_concentration) + " " + to_string(min_phosphorus_concentration) + " " + to_string(min_potassium_concentration)
+                   + " " + to_string(fertilizing_start_time) + " " + to_string(fertilizing_end_time);
+        }
+    private:
+        string id;
+};
+
+class lightingDataStructure : public SensorDataStructure {
+    public:
+        int lightPower;
+        time_t lighting_start_time;
+        time_t lighting_end_time;
+        lightingDataStructure(string id): SensorDataStructure() {
+            // Đọc từ file config dựa theo id của lighting
+            // Mở file config
+            this->id = id;
+            string path = "config/lighting_config_" + id + ".txt";
+            FILE* file = fopen(path.c_str(), "r");
+            if (file == nullptr) {
+                // Nếu không mở được file, đặt các giá trị mặc định
+                lightPower = 100; // Watts
+                // Lưu các giá trị mặc định vào file
+                save_config();
+            } else {
+                // Đọc các thông số từ file
+                fscanf(file, "%d", &lightPower);
+                fclose(file);
+            }
+        }
+        void save_config() {
+            // Lưu các thông số vào file config
+            string path = "config/lighting_config_" + id + ".txt";
+            FILE* file = fopen(path.c_str(), "w");
+            if (file != nullptr) {
+                fprintf(file, "%d\n", lightPower);
+                fclose(file);
+            }
+        }
+        string toString()
+        {
+            return to_string(lightPower) + " " + to_string(lighting_start_time) + " " + to_string(lighting_end_time);
+        }
+    private:
+        string id;
+};
 #endif // SENSORSERVER_SENSORDATASTRUCTURE_HPP
