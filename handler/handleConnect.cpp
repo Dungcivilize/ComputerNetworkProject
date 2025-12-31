@@ -11,8 +11,8 @@ void handleConnect(std::vector<Device*>& devices, int app_id) {
         cin >> ch;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (ch == 'y' || ch == 'Y') {
+            call_api(selected_device->sockfd, to_string(7) + " " + selected_device->info.token);
             selected_device->info.token.clear();
-            cout << " Device disconnected." << endl;
             return;
         }
     }

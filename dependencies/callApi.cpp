@@ -25,6 +25,15 @@ void handle_response(std::string response, void* output) {
     string status_code, power_data, data;
     stringstream ss(response);
     ss >> status_code;
+    if (status_code == "351" && output != nullptr) {
+        // Special case for 351 to handle user prompt
+        char choice;
+        cout << "A timer is already set for this device. Cancel this timer? (y/n): ";
+        cin >> choice;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        *((char*)output) = choice;
+        return;
+    }
     cout << get_status_message(stoi(status_code)) << endl;
     if (stoi(status_code) % 10 != 0) {
         return;
@@ -107,7 +116,6 @@ void handle_response(std::string response, void* output) {
             }
             break;
         default:
-            cout << "Unhandled action response." << endl;
             break;
     }
 }
@@ -170,8 +178,6 @@ string get_status_message(int status_code) {
             return "Lighting started successfully.";
         case 350:
             return "Timer set successfully.";
-        case 351:
-            return "Device already has a timer set.";
         case 352:
             return "Device already on";
         case 353:
@@ -182,11 +188,23 @@ string get_status_message(int status_code) {
             return "Scheduled action cancelled successfully.";
         case 361:
             return "No scheduled action to cancel.";
+        case 400:
+            return "Change password successful.";
+        case 401:
+            return "Current password is incorrect.";
+        case 402:
+            return "New password haven't changed (same as current password).";
         case 500:
             return "Get device status successful.";
         case 501:
             return "Device not found.";
+        case 700:
+            return "Device disconnected successfully.";
+        case 800:
+            return "Timer cancelled successfully.";
+        case 801:
+            return "No timer to cancel.";
         default:
-            return "Unknown status code.";
+            return "";
     }
 }

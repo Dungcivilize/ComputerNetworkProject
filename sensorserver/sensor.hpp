@@ -32,7 +32,7 @@ public:
     string name;
     string pass;
 
-    SensorDataStructure data;
+    SensorDataStructure* data;
 
     // per-client sockets are handled in threads; no global userfd/connected
     Identity* tcpid = nullptr;
@@ -45,13 +45,13 @@ public:
         tcpid = create_identity(port, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, INADDR_ANY);
         this->sensor_type = sensor_type;
         if (sensor_type == "SPRINKLER") {
-            data = SprinklerDataStructure(id);
+            data = new SprinklerDataStructure(id);
         } else if (sensor_type == "FERTILIZER") {
-            data = fertilizerDataStructure(id);
+            data = new FertilizerDataStructure(id);
         } else if (sensor_type == "LIGHTING") {
-            data = lightingDataStructure(id);
+            data = new LightingDataStructure(id);
         } else {
-            data = SensorDataStructure();
+            data = new SensorDataStructure();
         }
     }
 
@@ -133,11 +133,25 @@ public:
             } else if (cmd == "5") {
                 // Query data
                 cout << "Received query request from client " << peer_ip << endl;
-                string data_str = data.toString();
-                response = "500 " + data.current_action + " " + data_str;
+                string data_str = data->toString();
+                response = "500 " + to_string(data->is_running_on_command) + " " + data_str;
                 send_message(clientfd, response);
             } else if (cmd == "6") {
-
+            
+            } else if (cmd == "7") {
+                cout << "Client " << peer_ip << " disconnected." << endl;
+                info->app_id = -1;
+                send_message(clientfd, "700");
+            } else if (cmd == "8") {
+                cout << "Cancel Timer request from client " << peer_ip << endl;
+                if (!data->timer_set) {
+                    response = "801";
+                    send_message(clientfd, response);
+                    continue;
+                }
+                data->timer_set = false;
+                response = "800";
+                send_message(clientfd, response);
             } else {
                 response = "4";
                 send_message(clientfd, response);
@@ -147,6 +161,23 @@ public:
         delete info;
     }
 
+    void check_sensor()
+    {
+        time_t start_time = time(nullptr);
+        while (1) {
+            sleep(60); // check every minute
+            time_t end_time = time(nullptr);
+            if (data->powered_on == false) {
+                start_time = end_time;
+                continue;
+            }
+            if (end_time - start_time >= data->t * 60) {
+                data->run(start_time, end_time);
+                start_time = end_time;
+            }
+        }
+
+    }
     void run()
     {
         string buf, cmd;
@@ -158,7 +189,21 @@ public:
             close(tcpid->sockfd);
             return;
         }
-
+        // Start sensor check thread
+        pthread_t check_thread;
+        if (pthread_create(&check_thread, NULL, [](void* arg) -> void*
+            {
+                Sensor* self = (Sensor*)arg;
+                self->check_sensor();
+                return NULL;
+            }, this) != 0)
+        {
+            perror("pthread_create check_sensor");
+            close(tcpid->sockfd);
+            return;
+        }
+        pthread_detach(check_thread);
+        // Start accepting clients
         while (1)
         {
             struct sockaddr_in client_addr;

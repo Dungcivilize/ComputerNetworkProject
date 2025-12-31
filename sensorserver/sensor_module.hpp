@@ -32,12 +32,52 @@ bool read_from_ss(stringstream& ss, int clientfd, std::vector<std::string>& out,
     return true;
 }
 
-void handle_control_commands(int clientfd, stringstream& ss, string type)
+void handle_control_commands(int clientfd, stringstream& ss, SensorDataStructure* data)
 {
+    if (!data->powered_on) {
+        string response = "301";
+        send_message(clientfd, response);
+        return;
+    }
     string response;
-    if (type == "sprinkler") {
+    cout << "Received control request from client for " << data->type << endl;
+    if (data->is_running_on_command) {
+        response = "302";
+        send_message(clientfd, response);
+        return;
+    }
+    if (data->type == "sprinkler") {
         int volume;
         ss >> volume;
+        cout << "  sprinkler command -> water volume: " << volume << " Liters" << endl;
+        if (volume < 0) {
+            response = "3";
+            send_message(clientfd, response);
+            return;
+        }
+        SprinklerDataStructure* sprinkler_data = dynamic_cast<SprinklerDataStructure*>(data);
+        if (sprinkler_data == nullptr) {
+            response = "303";
+            send_message(clientfd, response);
+            return;
+        }
+        if (volume == 0) {
+            volume = sprinkler_data->base_volume;
+        }
+        if (sprinkler_data->humidity >= sprinkler_data->max_humidity) {
+            response = "321";
+            send_message(clientfd, response);
+            return;
+        }
+        if (volume > sprinkler_data->current_water_amount) {
+            response = "322";
+            send_message(clientfd, response);
+            return;
+        }
+        sprinkler_data->command_volume = volume;
+        sprinkler_data->is_running_on_command = true;
+        response = "320 " + to_string(sprinkler_data->calculate_power()) + " " + to_string(volume);
+        send_message(clientfd, response);
     } else {
         // reply OK (generic)
         response = "300";
@@ -95,7 +135,7 @@ void handle_connect(string peer_ip, ClientInfo* info, stringstream& ss, string p
         send_message(info->clientfd, response);
     }
 }
-void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, stringstream& ss) {
+void handle_control(string peer_ip, SensorDataStructure* data, int clientfd, stringstream& ss) {
     vector<string> params;
     string response;
     if (!(read_from_ss(ss, clientfd, params, 1))) {
@@ -106,18 +146,18 @@ void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, str
     if (action == "POWER_ON" || action == "POWER_OFF" || action == "0" || action == "1") {
         string state = (action == "POWER_ON" || action == "1") ? "ON" : "OFF";
         cout << "power control -> set state to " << state << endl;
-        if (data.powered_on == true && state == "ON") {
+        if (data->powered_on == true && state == "ON") {
             response = "311";
             send_message(clientfd, response);
             return;
         }
-        if (data.powered_on == false && state == "OFF") {
+        if (data->powered_on == false && state == "OFF") {
             response = "312";
             send_message(clientfd, response);
             return;
         } 
-        data.powered_on = (state == "ON");
-        response = "310 " + to_string(data.calculate_power()) + " " + (data.powered_on ? "1" : "0");
+        data->powered_on = (state == "ON");
+        response = "310 " + to_string(data->calculate_power()) + " " + (data->powered_on ? "1" : "0");
         send_message(clientfd, response);
     } else if (action == "TIMER" || action == "3") {
         if (!read_from_ss(ss, clientfd, params, 2)) {
@@ -139,18 +179,18 @@ void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, str
         }
         // Nếu current_time nhỏ hơn thời gian đã đặt thì báo đã đặt hẹn giờ
         time_t current_time = time(nullptr);
-        if (data.timer_time > current_time && data.current_action == "TIMER") {
+        if (data->timer_time > current_time && data->timer_set) {
             response = "351";
             send_message(clientfd, response);
             return;
         }
         // Nếu trạng thái hẹn giờ trùng với trạng thái hiện tại thì báo lỗi
-        if (data.powered_on == true && state == "1") {
+        if (data->powered_on == true && state == "1") {
             response = "352";
             send_message(clientfd, response);
             return;
         }
-        if (data.powered_on == false && state == "0") {
+        if (data->powered_on == false && state == "0") {
             response = "353";
             send_message(clientfd, response);
             return;
@@ -158,23 +198,23 @@ void handle_control(string peer_ip, SensorDataStructure& data, int clientfd, str
         
         // Tính thời điểm thực hiện hành động
         time_t action_time = current_time + minutes * 60;
-        data.timer_set_to = (state == "1");
-        data.timer_time = action_time;
-        data.current_action = "TIMER";
-        cout << "timer control -> set to " << (data.timer_set_to ? "ON" : "OFF") << " in " << minutes << " minutes" << endl;
-        response = "350 " + to_string(data.calculate_power()) + " " + to_string(minutes);
+        data->timer_set_to = (state == "1");
+        data->timer_time = action_time;
+        data->timer_set = true;
+        cout << "timer control -> set to " << (data->timer_set_to ? "ON" : "OFF") << " in " << minutes << " minutes" << endl;
+        response = "350 " + to_string(data->calculate_power()) + " " + to_string(minutes);
         send_message(clientfd, response);
     } else if (action == "CANCEL" || action == "4") {
-        if (data.current_action == "NONE") {
+        if (!data->is_running_on_command) {
             response = "361";
             send_message(clientfd, response);
             return;
         }
         cout << "cancel control request" << endl;
-        response = "360 " + data.current_action;
+        response = "360";
         send_message(clientfd, response);
-        data.current_action = "NONE";
+        data->is_running_on_command = false;
     } else {
-        handle_control_commands(clientfd, ss);
+        handle_control_commands(clientfd, ss, data);
     }
 }

@@ -4,42 +4,58 @@
 #include <string>
 #include <ctime>
 #include <iostream>
+#include <cmath>
 using namespace std;
 
 class SensorDataStructure {
     public:
         bool powered_on;
+        bool timer_set; 
         bool timer_set_to;
         time_t timer_time;
-        string current_action;
+        bool is_running_on_command;
         int t;
-        SensorDataStructure() : powered_on(false), timer_set_to(false), timer_time(0), current_action("NONE"), t(5) {}
-        int calculate_power() {
+        float total_energy_consumed = 0.0; // đơn vị: kWh
+        string type = "sensor";
+        SensorDataStructure() : powered_on(false), timer_set(false), timer_set_to(false), timer_time(0), is_running_on_command(false), t(1) {}
+        virtual ~SensorDataStructure() {}
+        virtual int calculate_base_power() {
             int power_consumption = 0; // đơn vị: Watt
-
-            if (powered_on) {
-                power_consumption += 3; // mạch điều khiển
-            } else {
-                return 0;
-            }
 
             time_t current_time = time(nullptr);
 
             // Nếu đang chạy chế độ hẹn giờ
-            if (current_action == "TIMER" && current_time < timer_time) {
-                power_consumption += 1; // bộ hẹn giờ
+            if (timer_set && current_time < timer_time) {
+                power_consumption += 2; // bộ hẹn giờ
             }
 
+            if (powered_on) {
+                power_consumption += 5; // mạch điều khiển
+            } else {
+                return power_consumption;
+            }
             return power_consumption; // tổng công suất tức thời (W)
         }
-        float calculate_power_consumption(int duration_minutes) {
-            int power_consumption = calculate_power(); // công suất tức thời (W)
-            return power_consumption * duration_minutes / 60 / 1000.0; // tổng năng lượng tiêu thụ (kWh)
+        virtual int calculate_running_on_command_power() {
+            return 0; // base class has no additional power when running on command
         }
-        void save_config() {
+        int calculate_power() {
+            return calculate_base_power() + calculate_running_on_command_power();
+        }
+        virtual float calculate_power_consumption(int duration_minutes, int running_on_command_minutes) {
+            return ((calculate_base_power() * duration_minutes) + (calculate_running_on_command_power() * running_on_command_minutes)) / 60000.0; // kWh
+        }
+        virtual void save_config() {
             // Base class has no config to save
         }
-        string toString()
+        virtual void run(time_t start_time, time_t end_time) {
+            // Base class has no scheduled actions
+            int duration_minutes = (end_time - start_time) / 60;
+            // Tính điện năng tiêu thụ 
+            float energy_used = calculate_power_consumption(duration_minutes, 0);
+            total_energy_consumed += energy_used;
+        }
+        virtual string toString()
         {
             return "";
         }
@@ -47,17 +63,19 @@ class SensorDataStructure {
 
 class SprinklerDataStructure : public SensorDataStructure {
     public:
-        float humidity;
+        float humidity = 50.0;
         float min_humidity;
         float max_humidity;
         int volume_per_minute;
         int volume_per_humidity_percent;
+        int command_volume = 0;
         int base_volume;
         int tank_capacity;
         int current_water_amount;
         time_t watering_start_time;
         time_t watering_end_time;
         SprinklerDataStructure(string id) : SensorDataStructure() {
+            type = "sprinkler";
             // Đọc từ file config dựa theo id của sprinkler
             // Mở file config
             this->id = id;
@@ -71,28 +89,36 @@ class SprinklerDataStructure : public SensorDataStructure {
                 volume_per_humidity_percent = 5;
                 base_volume = 50;
                 tank_capacity = 1000;
+                watering_start_time = 6 * 3600; // 6 AM
+                watering_end_time = 18 * 3600; // 6 PM
                 // Lưu các giá trị mặc định vào file
                 save_config();
             } else {
                 // Đọc các thông số từ file
-                fscanf(file, "%f %f %d %d %d %d", &min_humidity, &max_humidity, &volume_per_minute, &volume_per_humidity_percent, &base_volume, &tank_capacity);
+                fscanf(file, "%f %f %d %d %d %d %ld %ld", &min_humidity, &max_humidity, &volume_per_minute, &volume_per_humidity_percent, &base_volume, &tank_capacity, (long*)&watering_start_time, (long*)&watering_end_time);
                 fclose(file);
             }
+            current_water_amount = tank_capacity / 2;
+            humidity = min_humidity;
         }
-        int calculate_power() {
+        int calculate_base_power() override {
             int power_consumption = 0; // đơn vị: Watt
+
+            time_t current_time = time(nullptr);
+            // Nếu đang chạy chế độ hẹn giờ
+            if (timer_set && current_time < timer_time) {
+                power_consumption += 2; // bộ hẹn giờ
+            }
 
             if (powered_on) {
                 power_consumption += 5; // mạch điều khiển
             } else {
-                return 0;
+                return power_consumption;
             }
 
-            time_t current_time = time(nullptr);
 
             // Nếu đang tưới trong khoảng thời gian định sẵn
-            if (current_action == "NONE" && current_time >= watering_start_time &&
-                current_time <= watering_end_time) {
+            if (current_time >= watering_start_time && current_time <= watering_end_time) {
                 power_consumption += 20; // van điện từ
                 // Nếu độ ẩm hiện tại thấp hơn mức tối thiểu
                 if (humidity < min_humidity) {
@@ -105,44 +131,112 @@ class SprinklerDataStructure : public SensorDataStructure {
                 }
             }
 
-            // Nếu trạng thái hiện tại là đang tưới nước (bơm hoạt động)
-            if (current_action == "WATERING") {
-                power_consumption += 2 * volume_per_minute;
-            }
-
             // Nếu bơm đang nạp nước vào bể
             if (current_water_amount < tank_capacity / 10) {
                 // Công suất máy bơm vào bể cố định ở mức 50W
                 power_consumption += 50; // bơm nước vào bể 
             }
-
-            // Nếu đang chạy chế độ hẹn giờ
-            if (current_action == "TIMER") {
-                power_consumption += 2; // bộ hẹn giờ
-            }
-
             return power_consumption; // tổng công suất tức thời (W)
         }
+        int calculate_running_on_command_power() override {
+            return powered_on ? 2 * volume_per_minute : 0;
+        }
 
-        void save_config() {
+        void save_config() override {
             // Lưu các thông số vào file config
             string path = "config/sprinkler_config_" + id + ".txt";
             FILE* file = fopen(path.c_str(), "w");
             if (file != nullptr) {
-                fprintf(file, "%f %f %d %d %d %d\n", min_humidity, max_humidity, volume_per_minute, volume_per_humidity_percent, base_volume, tank_capacity);
+                fprintf(file, "%f %f %d %d %d %d %ld %ld\n", min_humidity, max_humidity, volume_per_minute, volume_per_humidity_percent, base_volume, tank_capacity, (long)watering_start_time, (long)watering_end_time);
                 fclose(file);
             }
         }
+        void run(time_t start_time, time_t end_time) override {
+            // Tính thời gian hoạt động
+            int duration_minutes = (end_time - start_time) / 60;
 
-        string toString()
+            bool is_wartering = false;
+            int auto_watering_minutes = 0;
+            // Nếu độ ẩm hiện tại thấp hơn mức tối thiểu hoặc trạng thái là đang tưới
+            if (humidity < min_humidity || is_running_on_command) {
+                is_wartering = true;
+                auto_watering_minutes = duration_minutes;
+            }
+
+            bool is_pumping = false;
+            // Nếu lượng nước hiện tại trong bể thấp hơn 50%
+            if (current_water_amount < tank_capacity / 10) {
+                is_pumping = true;
+            }
+            
+            // Kiểm tra timer 
+            bool timer_triggered = false;
+            time_t current_time = time(nullptr);
+            if (timer_set && current_time >= timer_time) {
+                // Thực hiện thay đổi trạng thái theo timer
+                powered_on = timer_set_to;
+                timer_set = false; // reset timer
+                timer_triggered = true;
+            }
+
+            int running_on_command_minutes = is_running_on_command ? command_volume / volume_per_minute : 0;
+            if (running_on_command_minutes > duration_minutes) {
+                running_on_command_minutes = duration_minutes;
+                command_volume -= running_on_command_minutes * volume_per_minute;
+            } else {
+                command_volume = 0;
+                is_running_on_command = false;
+            }
+            // Tính điện năng tiêu thụ 
+            float energy_used = calculate_power_consumption(duration_minutes, running_on_command_minutes);
+            total_energy_consumed += energy_used;
+
+            // Tính độ thay đổi độ ẩm theo thời gian trong ngày, ban ngày độ ẩm giảm nhanh hơn ban đêm
+            float humidity_change_rate = (start_time % 86400 >= 21600 && start_time % 86400 <= 64800) ? -0.15 : -0.05; // từ 6h đến 18h
+            humidity += humidity_change_rate * duration_minutes;
+            if (humidity < 0) humidity = 0;
+            
+            if (is_pumping) {
+                // Tính lượng nước bơm vào bể
+                int water_added = 2 * base_volume * duration_minutes;
+                current_water_amount += water_added;
+            }
+
+            // Nếu đang tưới nước
+            if (is_wartering) {
+                // Tính lượng nước đã tưới
+                int water_used = volume_per_minute * (auto_watering_minutes + running_on_command_minutes);
+                if (water_used > current_water_amount) {
+                    water_used = current_water_amount;
+                }
+                current_water_amount -= water_used;
+                // Tăng độ ẩm dựa trên lượng nước đã tưới
+                humidity += (float)water_used / volume_per_humidity_percent;
+                if (humidity > 100) humidity = 100;
+            }
+            if (current_water_amount < 0) {
+                current_water_amount = 0;
+            }
+            if (current_water_amount > tank_capacity) {
+                current_water_amount = tank_capacity;
+            }
+            cout << "Sprinkler " << id << " run from " << ctime(&start_time) << " to " << ctime(&end_time)
+                 << " | Energy used: " << energy_used << " kWh"
+                 << " | Humidity: " << humidity << "%"
+                 << " | Water left: " << current_water_amount << " Liters" << endl;
+            if (timer_triggered) {
+                cout << "  (Timer triggered: Power set to " << (powered_on ? "ON" : "OFF") << ")" << endl;
+            }
+        }
+        string toString() override
         {
-            return to_string(min_humidity) + " " + to_string(max_humidity) + " " + to_string(watering_start_time) + " " + to_string(watering_end_time);
+            return to_string(humidity) + " " + to_string(min_humidity) + " " + to_string(max_humidity) + " " + to_string(watering_start_time) + " " + to_string(watering_end_time) + " " + to_string(current_water_amount) + " " + to_string(tank_capacity) + " " + to_string(t) + " " + to_string(total_energy_consumed);
         }
     private:
         string id;
 };
 
-class fertilizerDataStructure : public SensorDataStructure {
+class FertilizerDataStructure : public SensorDataStructure {
     public:
         float nitrogen_concentration;
         float phosphorus_concentration;
@@ -153,13 +247,21 @@ class fertilizerDataStructure : public SensorDataStructure {
         float fertilizer_amount_nitrogen_per_liter;
         float fertilizer_amount_phosphorus_per_liter;
         float fertilizer_amount_potassium_per_liter;
+        float nitrogen_amout_per_percent_concentration;
+        float phosphorus_amout_per_percent_concentration;
+        float potassium_amout_per_percent_concentration;
         int volume_per_minute;
+        int command_volume = 0;
+        float command_fertilizer_amount_nitrogen_per_liter = 0;
+        float command_fertilizer_amount_phosphorus_per_liter = 0;
+        float command_fertilizer_amount_potassium_per_liter = 0;
         int base_volume;
         int tank_capacity;
         int current_warter_amount;
         time_t fertilizing_start_time;
         time_t fertilizing_end_time;
-        fertilizerDataStructure(string id): SensorDataStructure() {
+        FertilizerDataStructure(string id): SensorDataStructure() {
+            type = "fertilizer";
             // Đọc từ file config dựa theo id của fertilizer
             // Mở file config
             this->id = id;
@@ -185,6 +287,65 @@ class fertilizerDataStructure : public SensorDataStructure {
                 fclose(file);
             }
         }
+        int calculate_base_power() override {
+            int power_consumption = 0;
+            time_t current_time = time(nullptr);
+
+            // timer
+            if (timer_set && current_time < timer_time) {
+                power_consumption += 2;
+            }
+
+            if (powered_on) {
+                power_consumption += 5; // control circuit
+            } else {
+                return power_consumption;
+            }
+
+            // active fertilizing schedule
+            if (current_time >= fertilizing_start_time && current_time <= fertilizing_end_time) {
+                bool fertilizer_triggered = false;
+                if (nitrogen_concentration < min_nitrogen_concentration && fertilizer_amount_nitrogen_per_liter > 0) {
+                    power_consumption += 10;
+                    fertilizer_triggered = true;
+                }
+                if (phosphorus_concentration < min_phosphorus_concentration && fertilizer_amount_phosphorus_per_liter > 0) {
+                    power_consumption += 10;
+                    fertilizer_triggered = true;
+                }
+                if (potassium_concentration < min_potassium_concentration && fertilizer_amount_potassium_per_liter > 0) {
+                    power_consumption += 10;
+                    fertilizer_triggered = true;
+                }
+                if (fertilizer_triggered) {
+                    power_consumption += 2 * volume_per_minute;
+                }
+            }
+
+            // pump to fill tank if low
+            if (current_warter_amount < tank_capacity / 10) {
+                power_consumption += 40;
+            }
+
+            return power_consumption;
+        }
+
+        int calculate_running_on_command_power() override {
+            if (!powered_on) return 0;
+            int power_consumption = 0;
+            if (command_fertilizer_amount_nitrogen_per_liter > 0) {
+                power_consumption += 10;
+            }
+            if (command_fertilizer_amount_phosphorus_per_liter > 0) {
+                power_consumption += 10;
+            }
+            if (command_fertilizer_amount_potassium_per_liter > 0) {
+                power_consumption += 10;
+            }
+            power_consumption += 2 * volume_per_minute;
+            return power_consumption;
+        }
+
         void save_config() {
             // Lưu các thông số vào file config
             string path = "config/fertilizer_config_" + id + ".txt";
@@ -196,21 +357,101 @@ class fertilizerDataStructure : public SensorDataStructure {
                 fclose(file);
             }
         }
+        void run(time_t start_time, time_t end_time) override {
+            int duration_minutes = (end_time - start_time) / 60;
+
+            bool is_fertilizing = false;
+            if (nitrogen_concentration < min_nitrogen_concentration ||
+                phosphorus_concentration < min_phosphorus_concentration ||
+                potassium_concentration < min_potassium_concentration ||
+                is_running_on_command) {
+                is_fertilizing = true;
+            }
+
+            // handle timer
+            bool timer_triggered = false;
+            time_t current_time = time(nullptr);
+            if (timer_set && current_time >= timer_time) {
+                powered_on = timer_set_to;
+                timer_set = false;
+                timer_triggered = true;
+            }
+
+            int running_on_command_minutes = is_running_on_command ? command_volume / volume_per_minute : 0;
+            if (running_on_command_minutes > duration_minutes) {
+                running_on_command_minutes = duration_minutes;
+                command_volume -= running_on_command_minutes * volume_per_minute;
+            } else {
+                command_volume = 0;
+                is_running_on_command = false;
+            }
+
+            float energy_used = calculate_power_consumption(duration_minutes, running_on_command_minutes);
+            total_energy_consumed += energy_used;
+            // update concentrations
+            nitrogen_concentration -= duration_minutes * 0.1f; // simple decay model
+            phosphorus_concentration -= duration_minutes * 0.05f;
+            potassium_concentration -= duration_minutes * 0.05f;
+
+            // pump to fill tank
+            if (current_warter_amount < tank_capacity / 10) {
+                int water_added = 2 * base_volume * duration_minutes;
+                current_warter_amount += water_added;
+            }
+
+            if (is_fertilizing) {
+                int auto_warter_used = volume_per_minute * duration_minutes;
+                int command_warter_used = volume_per_minute * running_on_command_minutes;
+                int used = auto_warter_used + command_warter_used;
+                if (used > current_warter_amount) {
+                    used = current_warter_amount;
+                    auto_warter_used = used - command_warter_used;
+                    if (auto_warter_used < 0) {
+                        auto_warter_used = 0;
+                        command_volume = command_warter_used - used;
+                        command_warter_used = used;
+                    }
+                }
+                current_warter_amount -= used;
+                float total_added_n = nitrogen_concentration < min_nitrogen_concentration ? fertilizer_amount_nitrogen_per_liter * auto_warter_used : 0 + command_fertilizer_amount_nitrogen_per_liter * command_warter_used;
+                float total_added_p = phosphorus_concentration < min_phosphorus_concentration ? fertilizer_amount_phosphorus_per_liter * auto_warter_used : 0 + command_fertilizer_amount_phosphorus_per_liter * command_warter_used;
+                float total_added_k = potassium_concentration < min_potassium_concentration ? fertilizer_amount_potassium_per_liter * auto_warter_used : 0 + command_fertilizer_amount_potassium_per_liter * command_warter_used;
+
+                // Apply to concentrations (simple model): scale down total added to concentration units
+                const float SCALE_DIV = 100.0f; 
+                nitrogen_concentration += total_added_n / SCALE_DIV;
+                phosphorus_concentration += total_added_p / SCALE_DIV;
+                potassium_concentration += total_added_k / SCALE_DIV;
+            }
+            if (current_warter_amount < 0) current_warter_amount = 0;
+            if (current_warter_amount > tank_capacity) current_warter_amount = tank_capacity;
+            cout << "Fertilizer " << id << " run from " << ctime(&start_time) << " to " << ctime(&end_time)
+                 << " | Energy used: " << energy_used << " kWh"
+                 << " | N: " << nitrogen_concentration << "ppm, P: " << phosphorus_concentration << "ppm, K: " << potassium_concentration << "ppm"
+                 << " | Water left: " << current_warter_amount << " Liters" << endl;
+            if (timer_triggered) {
+                cout << "  (Timer triggered: Power set to " << (powered_on ? "ON" : "OFF") << ")" << endl;
+            }
+        }
+
         string toString()
         {
-            return to_string(min_nitrogen_concentration) + " " + to_string(min_phosphorus_concentration) + " " + to_string(min_potassium_concentration)
-                   + " " + to_string(fertilizing_start_time) + " " + to_string(fertilizing_end_time);
+            return to_string(nitrogen_concentration) + " " + to_string(min_nitrogen_concentration) + " " + to_string(phosphorus_concentration) + " " + to_string(min_phosphorus_concentration) + " " + to_string(potassium_concentration) + " " + to_string(min_potassium_concentration)
+                   + " " + to_string(fertilizing_start_time) + " " + to_string(fertilizing_end_time) + " " + to_string(t) + " " + to_string(total_energy_consumed);
         }
     private:
         string id;
 };
 
-class lightingDataStructure : public SensorDataStructure {
+class LightingDataStructure : public SensorDataStructure {
     public:
         int lightPower;
+        int command_lightPower = 0;
+        int command_duration_minutes = 0;
         time_t lighting_start_time;
         time_t lighting_end_time;
-        lightingDataStructure(string id): SensorDataStructure() {
+        LightingDataStructure(string id): SensorDataStructure() {
+            type = "lighting";
             // Đọc từ file config dựa theo id của lighting
             // Mở file config
             this->id = id;
@@ -236,6 +477,52 @@ class lightingDataStructure : public SensorDataStructure {
                 fclose(file);
             }
         }
+        int calculate_base_power() override {
+            int power = 0;
+            time_t current_time = time(nullptr);
+            if (timer_set && current_time < timer_time) power += 2;
+            if (powered_on) power += 3; else return power;
+            if (!is_running_on_command && current_time >= lighting_start_time && current_time <= lighting_end_time) {
+                power += lightPower;
+            }
+            return power;
+        }
+
+        int calculate_running_on_command_power() override {
+            return is_running_on_command ? command_lightPower : 0;
+        }
+        
+        float calculate_power_consumption(int duration_minutes, int running_on_command_minutes) override {
+            int scheduled_minutes = duration_minutes - running_on_command_minutes;
+            return ((calculate_base_power() * scheduled_minutes) + (calculate_running_on_command_power() * running_on_command_minutes)) / 60000.0; // kWh
+        }
+
+        void run(time_t start_time, time_t end_time) override {
+            int duration_minutes = (end_time - start_time) / 60;
+            time_t current_time = time(nullptr);
+            bool timer_triggered = false;
+            if (timer_set && current_time >= timer_time) {
+                powered_on = timer_set_to;
+                timer_set = false;
+                timer_triggered = true;
+            }
+            int running_on_command_minutes = is_running_on_command ? command_duration_minutes : 0;
+            if (running_on_command_minutes > duration_minutes) {
+                running_on_command_minutes = duration_minutes;
+                command_duration_minutes -= running_on_command_minutes;
+            } else {
+                command_duration_minutes = 0;
+            }
+            float energy_used = calculate_power_consumption(duration_minutes, running_on_command_minutes);
+            total_energy_consumed += energy_used;
+
+            cout << "Lighting " << id << " run from " << ctime(&start_time) << " to " << ctime(&end_time)
+                 << " | Energy used: " << energy_used << " kWh" << endl;
+            if (timer_triggered) {
+                cout << "  (Timer triggered: Power set to " << (powered_on ? "ON" : "OFF") << ")" << endl;
+            }
+        }
+
         string toString()
         {
             return to_string(lightPower) + " " + to_string(lighting_start_time) + " " + to_string(lighting_end_time);

@@ -26,7 +26,7 @@ void take_control(Device* selected_device)
             cout << "Watering cancelled." << endl;
             return;
         }
-        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(amount));
+        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 2 " + to_string(amount));
     }
     else if (selected_device->info.type == FERTILIZER) {
         // Nhập nồng độ phân đạm
@@ -62,7 +62,7 @@ void take_control(Device* selected_device)
             cout << "Fertilizing cancelled." << endl;
             return;
         }
-        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(cn) + " " + to_string(cp) + " " + to_string(ck) + " " + to_string(volume));
+        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 2 " + to_string(cn) + " " + to_string(cp) + " " + to_string(ck) + " " + to_string(volume));
     }
     else if (selected_device->info.type == LIGHTING) {
         cout << "Enter lighting duration in minutes (input -1 to cancel): ";
@@ -81,7 +81,7 @@ void take_control(Device* selected_device)
             cout << "Lighting cancelled." << endl;
             return;
         }
-        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " " + to_string(duration) + " " + to_string(power));
+        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 2 " + to_string(duration) + " " + to_string(power));
     }
 }
 
@@ -106,7 +106,12 @@ void set_timer(Device* selected_device)
         cout << "Timer setting cancelled." << endl;
         return;
     }
-    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 3 " + to_string(state) + " " + to_string(minutes));
+    char choice = 'n';
+    call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 3 " + to_string(state) + " " + to_string(minutes), (void*)&choice);
+    if (choice == 'y' || choice == 'Y') {
+        call_api(selected_device->sockfd, to_string(8) + " " + selected_device->info.token);
+        call_api(selected_device->sockfd, to_string(3) + " " + selected_device->info.token + " 3 " + to_string(state) + " " + to_string(minutes));
+    }
 }   
 
 void cancel_control(Device* selected_device)

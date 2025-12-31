@@ -3,6 +3,7 @@
 #include "handleScan.hpp"
 #include "handleConnect.hpp"
 #include "handleControl.hpp"
+#include "handleChangePassword.hpp"
 #include "handleChangeInfo.hpp"
 
 #include "../common/index.hpp"
@@ -15,14 +16,14 @@ bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
     Device* selected_device = nullptr;
     cout << "===============================" << endl;
     cout << "Available commands:" << endl;
-    cout << " 1. SCAN                        - Scan for devices" << endl;
-    cout << " 2. CONNECT                     - Connect to device with <id> using <password>" << endl;
+    cout << " 1. SCAN                           - Scan for devices" << endl;
+    cout << " 2. CONNECT/DISCONNECT             - Connect/Disconnect to device" << endl;
     cout << " 3. CONTROL DEVICE                 - Take control of a device" << endl;
-    cout << " 4. CHANGE_PW                      - Change password for device with <id>" << endl;
-    cout << " 5. QUERY                         - Query device for status, sensor data, usage, config or all" << endl;
-    cout << " 6. CONFIG                       - Change configuration parameter for device with <id>" << endl;
-    cout << " 7. EXIT                          - Exit the application" << endl;
-    cout << " 8. HELP                          - Show help for commands" << endl;
+    cout << " 4. CHANGE_PW                      - Change password for device" << endl;
+    cout << " 5. QUERY                          - Query device for status" << endl;
+    cout << " 6. CONFIG                         - Change configuration parameter for device" << endl;
+    cout << " 7. EXIT                           - Exit the application" << endl;
+    cout << " 8. HELP                           - Show help for commands" << endl;
     cout << "===============================" << endl;
     cout << ">> ";
     string cmd;
@@ -43,20 +44,14 @@ bool handleCommand(std::vector<Device*>& devices, uint16_t port, int app_id) {
     }
     else if (cmd == "4")
     {
-        string id, current_pass, new_pass;
-        cin >> id >> current_pass >> new_pass;
-        ssize_t idx = find_device_by_id(devices, id);
-        if (idx < 0)
-            cout << to_string(ERROR_UNKNOWN_TOKEN) << " No such id exist" << endl;
-        else
-            change_password(devices[idx], current_pass, new_pass);
+        handleChangePassword(devices);
     }
     else if (cmd == "5")
     {
         selected_device = listDeviceToSelect(devices);
         if (!selected_device)
             return true;
-        call_api(selected_device->sockfd, to_string(8) + " " + selected_device->info.token);
+        call_api(selected_device->sockfd, to_string(5) + " " + selected_device->info.token);
     }
     else if (cmd == "6")
     {
